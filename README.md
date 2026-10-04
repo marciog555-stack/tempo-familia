@@ -20,6 +20,11 @@ Nada sai do celular: o app **não tem permissão de internet**, não tem anúnci
   (página do app, Acessibilidade, Administradores do dispositivo, DNS privado, desinstalador);
   serviço em primeiro plano reiniciado no boot e após atualização.
 
+## Aparelhos
+
+Inclui instruções e proteções para Realme (Realme UI / ColorOS) e Samsung (One UI). A configuração inicial mostra
+instruções conforme a marca do celular.
+
 ## Compilação
 
 O GitHub Actions (`.github/workflows/build.yml`) compila a cada push e, na branch principal,

@@ -17,9 +17,15 @@ object Watchlists {
         "com.cloudmosa.puffinFree", "com.aloha.browser", "com.tor.browser", "org.torproject.torbrowser",
     )
 
-    /** Pacotes das Configurações e do desinstalador (inclui os da Samsung). */
+    /** Pacotes das Configurações e do desinstalador (inclui os da Samsung e Realme/Oppo). */
     val SETTINGS_PACKAGES = setOf(
         "com.android.settings",
+        // Realme / Oppo / OnePlus (ColorOS / Realme UI)
+        "com.oplus.settings", "com.coloros.settings",
+        "com.coloros.safecenter", "com.oplus.safecenter",
+        "com.oplus.battery", "com.coloros.oppoguardelf",
+        "com.oplus.packageinstaller", "com.coloros.packageinstaller",
+        "com.oplus.securitypermission", "com.coloros.securitypermission",
         "com.samsung.android.settings",
         "com.samsung.accessibility",
         "com.google.android.packageinstaller",
@@ -40,7 +46,8 @@ object Watchlists {
         "admin", "acessibilidade", "accessibility", "acessoaouso", "acessoadadosdeuso",
         "dadosdeuso", "usageaccess", "sobrepor", "sobreposicao", "aparecersobre",
         "aparecernotopo", "displayover", "appearontop", "configuracoesrestritas",
-        "restrictedsettings", "usartempofamilia", "limpardados", "limpararmazenamento",
+        "restrictedsettings", "usartempofamilia", "inicializacaoautomatica",
+        "autoinicializacao", "atividadeemsegundoplano", "usodabateria", "limpardados", "limpararmazenamento",
         "cleardata", "clearstorage", "desativar", "deactivate", "disable",
     )
 
@@ -48,6 +55,8 @@ object Watchlists {
         "dnsprivado", "privatedns",
         "administradoresdodispositivo", "appsdeadministracaododispositivo",
         "appsadmindodispositivo", "appsdeadmindodispositivo", "deviceadminapps",
+        "appsdeadministradordodispositivo", "administradordodispositivo",
+        "appsdeadministradordispositivo",
         "deviceadministrators",
     )
 

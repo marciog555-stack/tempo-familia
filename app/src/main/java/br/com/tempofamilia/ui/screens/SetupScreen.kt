@@ -46,6 +46,7 @@ import br.com.tempofamilia.service.GuardService
 import br.com.tempofamilia.ui.InfoCard
 import br.com.tempofamilia.ui.StatusLine
 import br.com.tempofamilia.ui.rememberResumeTick
+import br.com.tempofamilia.util.Aparelho
 import br.com.tempofamilia.util.Perms
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -59,6 +60,8 @@ private data class Passo(
     val obrigatorio: Boolean,
     val concedido: (Context) -> Boolean,
     val abrir: (Context) -> Intent?,
+    val botaoExtra: String? = null,
+    val abrirExtra: ((Context) -> Intent)? = null,
 )
 
 private fun passosDePermissao(): List<Passo> = listOf(
@@ -74,7 +77,11 @@ private fun passosDePermissao(): List<Passo> = listOf(
     Passo(
         titulo = "Sobreposição a outros apps",
         explicacao = "Permite mostrar a tela de bloqueio por cima dos outros apps.\n\n" +
-            "Ative \"Permitir sobreposição\" (na Samsung: \"Aparecer por cima\").",
+            Aparelho.texto(
+                realme = "Ative a chave ao lado de \"Tempo Família\" (pode aparecer como \"Exibir sobre outros apps\").",
+                samsung = "Ative \"Aparecer por cima\".",
+                outro = "Ative \"Permitir sobreposição a outros apps\".",
+            ),
         botao = "Abrir Sobreposição",
         obrigatorio = true,
         concedido = Perms::overlay,
@@ -87,10 +94,10 @@ private fun passosDePermissao(): List<Passo> = listOf(
             "1. Primeiro tente ativar a Acessibilidade no próximo passo. Se aparecer o aviso " +
             "\"Configuração restrita\", toque em OK.\n" +
             "2. Volte aqui e toque em \"Abrir página do app\".\n" +
-            "3. No Samsung, toque nos três pontinhos (⋮) no canto superior direito e escolha " +
-            "\"Permitir configurações restritas\". Confirme com sua digital ou PIN.\n" +
+            "3. Na página do app, toque nos três pontinhos (⋮) no canto superior direito e escolha " +
+            "\"Permitir configurações restritas\". Confirme com sua digital ou senha da tela.\n" +
             "4. Volte e ative a Acessibilidade.\n\n" +
-            "Se o seu Android for mais antigo ou a opção não aparecer, pode seguir em frente.",
+            "Se a opção não aparecer, pode seguir em frente.",
         botao = "Abrir página do app",
         obrigatorio = false,
         concedido = { Build.VERSION.SDK_INT < 33 || Perms.accessibility(it) },
@@ -100,9 +107,15 @@ private fun passosDePermissao(): List<Passo> = listOf(
         titulo = "Acessibilidade",
         explicacao = "É o coração da proteção: bloqueia pesquisas e sites pornográficos e protege " +
             "as configurações contra desativação.\n\n" +
-            "No Samsung: Acessibilidade → Apps instalados (ou \"Serviços instalados\") → " +
-            "Tempo Família → ative a chave e toque em \"Permitir\".\n\n" +
-            "Se a chave estiver cinza ou aparecer \"Configuração restrita\", volte ao passo anterior.",
+            Aparelho.texto(
+                realme = "No Realme: Acessibilidade → role até \"Apps baixados\" (ou \"Serviços instalados\") → " +
+                    "Tempo Família → ative a chave e toque em \"Permitir\".",
+                samsung = "No Samsung: Acessibilidade → Apps instalados (ou \"Serviços instalados\") → " +
+                    "Tempo Família → ative a chave e toque em \"Permitir\".",
+                outro = "Acessibilidade → Apps baixados (ou \"Serviços instalados\") → Tempo Família → " +
+                    "ative a chave e toque em \"Permitir\".",
+            ) +
+            "\n\nSe a chave estiver cinza ou aparecer \"Configuração restrita\", volte ao passo anterior.",
         botao = "Abrir Acessibilidade",
         obrigatorio = true,
         concedido = Perms::accessibility,
@@ -118,14 +131,28 @@ private fun passosDePermissao(): List<Passo> = listOf(
         abrir = Perms::adminIntent,
     ),
     Passo(
-        titulo = "Ignorar otimização de bateria",
-        explicacao = "Evita que o sistema feche o Tempo Família para economizar bateria. Toque em \"Permitir\".\n\n" +
-            "Dica Samsung: em Configurações → Bateria → Limites de uso em segundo plano → " +
-            "\"Apps que nunca são suspensos\", adicione o Tempo Família.",
+        titulo = "Funcionar em segundo plano",
+        explicacao = "Evita que o sistema feche o Tempo Família para economizar bateria. " +
+            "Toque no botão abaixo e escolha \"Permitir\".\n\n" +
+            Aparelho.texto(
+                realme = "IMPORTANTE no Realme (o sistema fecha apps com muita força):\n" +
+                    "1. Toque em \"Abrir página do app\" abaixo → \"Uso da bateria\" e ative " +
+                    "\"Permitir atividade em segundo plano\" e \"Permitir inicialização automática\" " +
+                    "(se aparecer \"Permitir atividade em primeiro plano\", ative também).\n" +
+                    "2. Abra os apps recentes (deslize de baixo para cima e segure), toque nos três " +
+                    "pontinhos do cartão do Tempo Família e escolha \"Bloquear\" (cadeado), para ele " +
+                    "não ser fechado ao limpar os recentes.",
+                samsung = "Dica Samsung: em Configurações → Bateria → Limites de uso em segundo plano → " +
+                    "\"Apps que nunca são suspensos\", adicione o Tempo Família.",
+                outro = "Se o seu celular tiver opção de \"inicialização automática\" ou \"atividade em " +
+                    "segundo plano\" na página do app, ative também.",
+            ),
         botao = "Permitir em segundo plano",
         obrigatorio = false,
         concedido = Perms::battery,
         abrir = Perms::batteryIntent,
+        botaoExtra = "Abrir página do app",
+        abrirExtra = Perms::appDetailsIntent,
     ),
 )
 
@@ -163,6 +190,7 @@ fun SetupScreen() {
                     passo = p,
                     concedido = ok,
                     onAbrir = { p.abrir(ctx)?.let { Perms.open(ctx, it) } },
+                    onAbrirExtra = { p.abrirExtra?.invoke(ctx)?.let { Perms.open(ctx, it) } },
                     onVoltar = { etapa-- },
                     onProximo = { etapa++ },
                 )
@@ -250,6 +278,7 @@ private fun PassoPermissao(
     passo: Passo,
     concedido: Boolean,
     onAbrir: () -> Unit,
+    onAbrirExtra: () -> Unit,
     onVoltar: () -> Unit,
     onProximo: () -> Unit,
 ) {
@@ -257,6 +286,9 @@ private fun PassoPermissao(
     Text(passo.explicacao, style = MaterialTheme.typography.bodyLarge)
     StatusLine(concedido, if (concedido) "Concedido" else "Ainda não concedido")
     Button(onClick = onAbrir, modifier = Modifier.fillMaxWidth()) { Text(passo.botao) }
+    passo.botaoExtra?.let { rotulo ->
+        OutlinedButton(onClick = onAbrirExtra, modifier = Modifier.fillMaxWidth()) { Text(rotulo) }
+    }
     Spacer(Modifier.height(8.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         OutlinedButton(onClick = onVoltar, modifier = Modifier.weight(1f)) { Text("Voltar") }

@@ -54,6 +54,10 @@ class RegrasTest {
         assertTrue(tela("Tempo Família  Desinstalar  Forçar parada  Armazenamento"))
         assertTrue(tela("DNS privado  Automático  Desativado"))
         assertTrue(tela("Apps admin. do dispositivo  Tempo Família"))
+        // Telas do Realme
+        assertTrue(tela("Apps de administrador do dispositivo  Encontrar dispositivo"))
+        assertTrue(tela("Tempo Família  Uso da bateria  Permitir atividade em segundo plano"))
+        assertTrue(tela("Conexão e compartilhamento  DNS privado"))
         assertFalse(tela("Conexões  Sons e vibração  Notificações  Tela  Bateria"))
         assertFalse(tela("Apps  Tempo Família  WhatsApp  Instagram"))
     }
