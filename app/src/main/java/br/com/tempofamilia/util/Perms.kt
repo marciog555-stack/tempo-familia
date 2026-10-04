@@ -2,7 +2,9 @@ package br.com.tempofamilia.util
 
 import android.Manifest
 import android.app.admin.DevicePolicyManager
+import android.app.Activity
 import android.content.ComponentName
+import android.content.ContextWrapper
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -69,7 +71,11 @@ object Perms {
     /** Abre uma tela do sistema; se falhar, abre as Configurações gerais. */
     fun open(ctx: Context, intent: Intent) {
         try {
-            ctx.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            // A tela de ativar o administrador se fecha sozinha se for aberta como
+            // "nova tarefa"; por isso, a partir de uma tela do app, abrimos sem esse flag.
+            val activity = ctx.findActivity()
+            if (activity != null) activity.startActivity(intent)
+            else ctx.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         } catch (e: Exception) {
             try {
                 ctx.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -77,4 +83,14 @@ object Perms {
             }
         }
     }
+}
+
+/** Encontra a Activity por trás de um Context (o Compose pode embrulhar o Context). */
+private fun Context.findActivity(): Activity? {
+    var c: Context? = this
+    while (c is ContextWrapper) {
+        if (c is Activity) return c
+        c = c.baseContext
+    }
+    return null
 }
