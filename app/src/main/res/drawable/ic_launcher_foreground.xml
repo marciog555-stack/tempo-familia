@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Coração com um relógio: tempo de qualidade com a família -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M54,80 L33,59 C26,52 26,41 33,35 C39,30 48,31 54,38 C60,31 69,30 75,35 C82,41 82,52 75,59 Z" />
+    <path
+        android:fillColor="#FF2E7D6B"
+        android:pathData="M54,40 A11,11 0 1,1 53.99,40 Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M54,43 A8,8 0 1,1 53.99,43 Z" />
+    <path
+        android:fillColor="#FF2E7D6B"
+        android:pathData="M53,45 L55,45 L55,51 L59,53 L58,55 L53,52 Z" />
+</vector>

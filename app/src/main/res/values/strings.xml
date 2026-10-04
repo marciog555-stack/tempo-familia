@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Tempo Família</string>
+    <string name="accessibility_description">Bloqueia pornografia em navegadores e buscas, aplica os limites de tempo dos apps e protege as configurações do Tempo Família contra desativação sem a senha. Nenhum dado sai do celular.</string>
+    <string name="admin_description">Dificulta a desinstalação do Tempo Família sem a pessoa de confiança.</string>
+</resources>
