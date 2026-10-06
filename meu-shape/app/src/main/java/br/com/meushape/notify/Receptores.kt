@@ -8,7 +8,6 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import br.com.meushape.MainActivity
 import br.com.meushape.R
-import br.com.meushape.data.Feito
 import br.com.meushape.data.Repo
 import br.com.meushape.data.TipoItem
 import br.com.meushape.logic.Horario
@@ -95,9 +94,4 @@ class BootReceiver : BroadcastReceiver() {
         Repo.get(ctx).prepararPrimeiraVez()
         Alarmes.agendarProximo(ctx)
     }
-}
-
-/** Marca um item como feito (usado pela tela e pela notificação). */
-suspend fun Repo.marcarFeito(dia: LocalDate, itemId: Long, opcao: String, livre: Boolean = false) {
-    db.feitos().marcar(Feito(dia.toString(), itemId, System.currentTimeMillis(), opcao, livre))
 }

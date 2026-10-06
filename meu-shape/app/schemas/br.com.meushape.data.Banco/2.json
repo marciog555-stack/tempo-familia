@@ -1,0 +1,383 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 2,
+    "identityHash": "89cb1bde1b4479c76cdbc6e09135f00d",
+    "entities": [
+      {
+        "tableName": "item_plano",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `tipoDia` TEXT NOT NULL, `inicioMin` INTEGER NOT NULL, `fimMin` INTEGER, `tipo` TEXT NOT NULL, `titulo` TEXT NOT NULL, `descricao` TEXT NOT NULL, `opcoes` TEXT NOT NULL, `tituloAlt` TEXT NOT NULL, `descricaoAlt` TEXT NOT NULL, `marmita` TEXT NOT NULL, `notificar` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tipoDia",
+            "columnName": "tipoDia",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "inicioMin",
+            "columnName": "inicioMin",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fimMin",
+            "columnName": "fimMin",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "tipo",
+            "columnName": "tipo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "titulo",
+            "columnName": "titulo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "descricao",
+            "columnName": "descricao",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "opcoes",
+            "columnName": "opcoes",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tituloAlt",
+            "columnName": "tituloAlt",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "descricaoAlt",
+            "columnName": "descricaoAlt",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "marmita",
+            "columnName": "marmita",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "notificar",
+            "columnName": "notificar",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "feito",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`data` TEXT NOT NULL, `itemId` INTEGER NOT NULL, `quando` INTEGER NOT NULL, `opcao` TEXT NOT NULL, `refeicaoLivre` INTEGER NOT NULL, PRIMARY KEY(`data`, `itemId`))",
+        "fields": [
+          {
+            "fieldPath": "data",
+            "columnName": "data",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "itemId",
+            "columnName": "itemId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "quando",
+            "columnName": "quando",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "opcao",
+            "columnName": "opcao",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "refeicaoLivre",
+            "columnName": "refeicaoLivre",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "data",
+            "itemId"
+          ]
+        }
+      },
+      {
+        "tableName": "troca_dia",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`data` TEXT NOT NULL, `tipo` TEXT, `atividade` TEXT, PRIMARY KEY(`data`))",
+        "fields": [
+          {
+            "fieldPath": "data",
+            "columnName": "data",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tipo",
+            "columnName": "tipo",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "atividade",
+            "columnName": "atividade",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "data"
+          ]
+        }
+      },
+      {
+        "tableName": "agua",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`data` TEXT NOT NULL, `copos` INTEGER NOT NULL, PRIMARY KEY(`data`))",
+        "fields": [
+          {
+            "fieldPath": "data",
+            "columnName": "data",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "copos",
+            "columnName": "copos",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "data"
+          ]
+        }
+      },
+      {
+        "tableName": "config",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`chave` TEXT NOT NULL, `valor` TEXT NOT NULL, PRIMARY KEY(`chave`))",
+        "fields": [
+          {
+            "fieldPath": "chave",
+            "columnName": "chave",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "valor",
+            "columnName": "valor",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "chave"
+          ]
+        }
+      },
+      {
+        "tableName": "item_compra",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `lista` TEXT NOT NULL, `nome` TEXT NOT NULL, `quantidade` TEXT NOT NULL, `preco` REAL NOT NULL, `noCompleto` INTEGER NOT NULL, `noEconomico` INTEGER NOT NULL, `quantidadeEco` TEXT NOT NULL, `precoEco` REAL, `ordem` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lista",
+            "columnName": "lista",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nome",
+            "columnName": "nome",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "quantidade",
+            "columnName": "quantidade",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "preco",
+            "columnName": "preco",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "noCompleto",
+            "columnName": "noCompleto",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "noEconomico",
+            "columnName": "noEconomico",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "quantidadeEco",
+            "columnName": "quantidadeEco",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "precoEco",
+            "columnName": "precoEco",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "ordem",
+            "columnName": "ordem",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "compra_marcada",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`itemId` INTEGER NOT NULL, `periodo` TEXT NOT NULL, `valor` REAL NOT NULL, PRIMARY KEY(`itemId`, `periodo`))",
+        "fields": [
+          {
+            "fieldPath": "itemId",
+            "columnName": "itemId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "periodo",
+            "columnName": "periodo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "valor",
+            "columnName": "valor",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "itemId",
+            "periodo"
+          ]
+        }
+      },
+      {
+        "tableName": "estoque_marmita",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`tipo` TEXT NOT NULL, `geladeira` INTEGER NOT NULL, `freezer` INTEGER NOT NULL, PRIMARY KEY(`tipo`))",
+        "fields": [
+          {
+            "fieldPath": "tipo",
+            "columnName": "tipo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "geladeira",
+            "columnName": "geladeira",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "freezer",
+            "columnName": "freezer",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "tipo"
+          ]
+        }
+      },
+      {
+        "tableName": "marmita_montada",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `data` TEXT NOT NULL, `tipo` TEXT NOT NULL, `quantidade` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "data",
+            "columnName": "data",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tipo",
+            "columnName": "tipo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "quantidade",
+            "columnName": "quantidade",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '89cb1bde1b4479c76cdbc6e09135f00d')"
+    ]
+  }
+}

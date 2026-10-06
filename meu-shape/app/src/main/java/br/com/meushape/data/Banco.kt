@@ -1,6 +1,7 @@
 package br.com.meushape.data
 
 import android.content.Context
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -10,9 +11,13 @@ import androidx.room.RoomDatabase
  * Ao mudar o esquema em etapas futuras, aumente a versão e use migrações para não perder dados.
  */
 @Database(
-    entities = [ItemPlano::class, Feito::class, TrocaDiaEntity::class, Agua::class, Config::class],
-    version = 1,
+    entities = [
+        ItemPlano::class, Feito::class, TrocaDiaEntity::class, Agua::class, Config::class,
+        ItemCompra::class, CompraMarcada::class, EstoqueMarmita::class, MarmitaMontada::class,
+    ],
+    version = 2,
     exportSchema = true,
+    autoMigrations = [AutoMigration(from = 1, to = 2)],
 )
 abstract class Banco : RoomDatabase() {
     abstract fun plano(): PlanoDao
@@ -20,6 +25,8 @@ abstract class Banco : RoomDatabase() {
     abstract fun escala(): EscalaDao
     abstract fun agua(): AguaDao
     abstract fun config(): ConfigDao
+    abstract fun compras(): ComprasDao
+    abstract fun marmitas(): MarmitaDao
 
     companion object {
         @Volatile private var instancia: Banco? = null

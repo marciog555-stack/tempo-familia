@@ -68,3 +68,54 @@ data class Config(
     @PrimaryKey val chave: String,
     val valor: String,
 )
+
+// ---------------- Etapa 2: compras e marmitas ----------------
+
+object Lista {
+    const val SEMANAL = "SEMANAL"
+    const val MENSAL = "MENSAL"
+}
+
+/** Item da lista de compras. Preço é o valor total do item (ex.: R$ 18 pelas 2 dúzias). */
+@Entity(tableName = "item_compra")
+data class ItemCompra(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val lista: String,
+    val nome: String,
+    val quantidade: String = "",
+    val preco: Double = 0.0,
+    /** Aparece na versão completa / econômica. */
+    val noCompleto: Boolean = true,
+    val noEconomico: Boolean = true,
+    /** Quantidade e preço diferentes na versão econômica (vazio/nulo = iguais). */
+    val quantidadeEco: String = "",
+    val precoEco: Double? = null,
+    val ordem: Int = 0,
+)
+
+/** Marcação de um item comprado num período (semana "2026-10-05" ou mês "2026-10"). */
+@Entity(tableName = "compra_marcada", primaryKeys = ["itemId", "periodo"])
+data class CompraMarcada(
+    val itemId: Long,
+    val periodo: String,
+    val valor: Double = 0.0,
+)
+
+/** Estoque de marmitas por tipo (ALMOCO / JANTA). */
+@Entity(tableName = "estoque_marmita")
+data class EstoqueMarmita(
+    @PrimaryKey val tipo: String,
+    val geladeira: Int = 0,
+    val freezer: Int = 0,
+) {
+    val total get() = geladeira + freezer
+}
+
+/** Registro de marmitas montadas (para a meta semanal). */
+@Entity(tableName = "marmita_montada")
+data class MarmitaMontada(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val data: String,
+    val tipo: String,
+    val quantidade: Int,
+)

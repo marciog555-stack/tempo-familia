@@ -30,6 +30,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import br.com.meushape.ui.screens.ComprasAba
 import br.com.meushape.ui.screens.EmBreve
 import br.com.meushape.ui.screens.HojeAba
 import br.com.meushape.ui.theme.TemaMeuShape
@@ -80,7 +81,7 @@ private fun Principal() {
             when (aba) {
                 0 -> HojeAba()
                 1 -> EmBreve("Treinos", 3)
-                2 -> EmBreve("Compras e marmitas", 2)
+                2 -> ComprasAba()
                 3 -> EmBreve("Sono", 4)
                 else -> EmBreve("Progresso", 5)
             }

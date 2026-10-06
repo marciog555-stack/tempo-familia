@@ -5,13 +5,14 @@ import br.com.meushape.logic.AtividadeFolga
 import br.com.meushape.logic.Escala
 import br.com.meushape.logic.TipoDia
 import br.com.meushape.logic.TrocaDia
+import br.com.meushape.notify.Avisos
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 import java.time.temporal.TemporalAdjusters
 
 /** Ponto único de acesso aos dados. */
-class Repo(ctx: Context) {
+class Repo(private val ctx: Context) {
     val db = Banco.get(ctx)
 
     /** Cria o cardápio padrão e o perfil inicial na primeira vez. */
@@ -22,7 +23,66 @@ class Repo(ctx: Context) {
         Perfil.PADRAO.forEach { (chave, valor) ->
             if (db.config().ler(chave) == null) db.config().salvar(Config(chave, valor))
         }
+        // Listas de compras só são criadas uma vez (se você apagar tudo, não voltam).
+        if (db.config().ler("compras_criadas") == null) {
+            if (db.compras().contar() == 0) db.compras().inserir(ComprasPadrao.itens())
+            db.config().salvar(Config("compras_criadas", "1"))
+        }
+        listOf(Marmita.ALMOCO, Marmita.JANTA).forEach {
+            if (db.marmitas().estoque(it) == null) db.marmitas().salvarEstoque(EstoqueMarmita(it))
+        }
     }
+
+    // ---- Marcar refeições (com baixa automática de marmita) ----
+
+    /** Marca um item como feito. Se a refeição usa marmita, tira 1 do estoque (geladeira primeiro). */
+    suspend fun marcarFeito(dia: LocalDate, itemId: Long, opcao: String, livre: Boolean = false) {
+        val ja = db.feitos().listarPeriodo(dia.toString(), dia.toString()).any { it.itemId == itemId }
+        db.feitos().marcar(Feito(dia.toString(), itemId, System.currentTimeMillis(), opcao, livre))
+        val item = db.plano().buscar(itemId) ?: return
+        if (!ja && !livre && item.marmita.isNotEmpty()) {
+            val e = db.marmitas().estoque(item.marmita) ?: EstoqueMarmita(item.marmita)
+            val novo = when {
+                e.geladeira > 0 -> e.copy(geladeira = e.geladeira - 1)
+                e.freezer > 0 -> e.copy(freezer = e.freezer - 1)
+                else -> e
+            }
+            db.marmitas().salvarEstoque(novo)
+            if (novo != e && novo.total <= 2) Avisos.estoqueBaixo(ctx, novo)
+        }
+    }
+
+    /** Desmarca e devolve a marmita para a geladeira, se tinha sido baixada. */
+    suspend fun desmarcarFeito(dia: LocalDate, itemId: Long) {
+        val feito = db.feitos().listarPeriodo(dia.toString(), dia.toString()).firstOrNull { it.itemId == itemId } ?: return
+        db.feitos().desmarcar(dia.toString(), itemId)
+        val item = db.plano().buscar(itemId) ?: return
+        if (!feito.refeicaoLivre && item.marmita.isNotEmpty()) {
+            val e = db.marmitas().estoque(item.marmita) ?: EstoqueMarmita(item.marmita)
+            db.marmitas().salvarEstoque(e.copy(geladeira = e.geladeira + 1))
+        }
+    }
+
+    // ---- Marmitas ----
+
+    suspend fun montarMarmitas(tipo: String, qtd: Int, noFreezer: Boolean, dia: LocalDate) {
+        val e = db.marmitas().estoque(tipo) ?: EstoqueMarmita(tipo)
+        db.marmitas().salvarEstoque(
+            if (noFreezer) e.copy(freezer = e.freezer + qtd) else e.copy(geladeira = e.geladeira + qtd)
+        )
+        db.marmitas().registrarMontada(MarmitaMontada(data = dia.toString(), tipo = tipo, quantidade = qtd))
+    }
+
+    suspend fun ajustarEstoque(e: EstoqueMarmita) {
+        db.marmitas().salvarEstoque(e.copy(geladeira = e.geladeira.coerceAtLeast(0), freezer = e.freezer.coerceAtLeast(0)))
+    }
+
+    // ---- Compras ----
+
+    suspend fun modoEconomico(): Boolean = db.config().ler("compras_economico") == "1"
+
+    suspend fun definirModoEconomico(eco: Boolean) =
+        db.config().salvar(Config("compras_economico", if (eco) "1" else "0"))
 
     // ---- Escala ----
 
@@ -57,6 +117,10 @@ class Repo(ctx: Context) {
     }
 
     companion object {
+        /** Período de marcação: semana (segunda) para a lista semanal, mês para a mensal. */
+        fun periodo(lista: String, dia: LocalDate): String =
+            if (lista == Lista.SEMANAL) inicioSemana(dia).toString() else dia.toString().substring(0, 7)
+
         fun chavePlano(tipo: TipoDia) = if (tipo.usaCardapioFolga) "FOLGA" else "PLANTAO"
         fun inicioSemana(dia: LocalDate): LocalDate =
             dia.with(TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))

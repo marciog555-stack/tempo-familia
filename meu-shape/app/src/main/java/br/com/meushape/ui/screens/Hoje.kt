@@ -50,7 +50,6 @@ import br.com.meushape.logic.AtividadeFolga
 import br.com.meushape.logic.Escala
 import br.com.meushape.logic.Horario
 import br.com.meushape.logic.TipoDia
-import br.com.meushape.notify.marcarFeito
 import br.com.meushape.ui.CartaoApp
 import br.com.meushape.ui.theme.Azul
 import br.com.meushape.ui.theme.Cinza
@@ -114,6 +113,7 @@ fun HojeScreen(abrirCalendario: () -> Unit, abrirRotina: () -> Unit) {
     }.collectAsState(initial = emptyList())
     val feitosSemana by remember(dia) { repo.observarFeitosDaSemana(dia) }.collectAsState(initial = emptyList())
     val agua by remember(dia) { repo.db.agua().observar(dia.toString()) }.collectAsState(initial = null)
+    val estoque by remember { repo.db.marmitas().observarEstoque() }.collectAsState(initial = emptyList())
 
     val feitosHoje = feitosSemana.filter { it.data == dia.toString() }.associateBy { it.itemId }
     val livreUsada = feitosSemana.firstOrNull { it.refeicaoLivre }
@@ -162,6 +162,18 @@ fun HojeScreen(abrirCalendario: () -> Unit, abrirRotina: () -> Unit) {
                 FilledTonalButton(onClick = abrirRotina, modifier = Modifier.weight(1f)) { Text("Editar rotina") }
             }
         }
+        val baixos = estoque.filter { it.total <= 2 }
+        if (baixos.isNotEmpty()) {
+            item {
+                CartaoApp(cor = Laranja.copy(alpha = 0.2f)) {
+                    Text("🍱 Estoque de marmitas baixo", fontWeight = FontWeight.SemiBold)
+                    baixos.forEach {
+                        Text("${if (it.tipo == "ALMOCO") "Almoço" else "Janta"}: ${it.total} restante(s)")
+                    }
+                    Text("Monte mais na aba Compras → Marmitas.", color = Cinza)
+                }
+            }
+        }
         item { CartaoAgua(agua, onMudar = { novo -> scope.launch { repo.db.agua().salvar(Agua(dia.toString(), novo)) } }) }
         item {
             val feitos = plano.count { it.id in feitosHoje }
@@ -191,7 +203,7 @@ fun HojeScreen(abrirCalendario: () -> Unit, abrirRotina: () -> Unit) {
                 onMarcar = {
                     if (item.opcoes.isNotBlank()) escolhendoOpcao = item else marcar(item)
                 },
-                onDesmarcar = { scope.launch { repo.db.feitos().desmarcar(dia.toString(), item.id) } },
+                onDesmarcar = { scope.launch { repo.desmarcarFeito(dia, item.id) } },
                 onLivre = { confirmandoLivre = item },
             )
         }
