@@ -4,6 +4,9 @@ name: Compilar APK
 on:
   push:
     branches: ['**']
+    paths-ignore:
+      - 'meu-shape/**'
+      - '.github/workflows/meu-shape.yml'
   workflow_dispatch:
 
 permissions:

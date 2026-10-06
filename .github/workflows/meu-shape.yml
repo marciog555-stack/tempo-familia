@@ -1,0 +1,61 @@
+# Meu Shape: compila o APK de debug a cada push que mexe na pasta meu-shape/
+# e publica numa Release própria (tag meushape-v1.0.N).
+name: Meu Shape - APK
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'meu-shape/**'
+      - '.github/workflows/meu-shape.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: meu-shape
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Instalar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Preparar Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Testes
+        run: ./gradlew testDebugUnitTest --no-daemon
+
+      - name: Compilar APK
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Renomear APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk "MeuShape-v1.0.${{ github.run_number }}.apk"
+
+      - name: Guardar APK no build
+        uses: actions/upload-artifact@v4
+        with:
+          name: MeuShape-v1.0.${{ github.run_number }}
+          path: meu-shape/MeuShape-v1.0.${{ github.run_number }}.apk
+
+      - name: Publicar Release
+        if: github.ref_name == github.event.repository.default_branch
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: meushape-v1.0.${{ github.run_number }}
+          name: Meu Shape v1.0.${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          make_latest: false
+          files: meu-shape/MeuShape-v1.0.${{ github.run_number }}.apk
+          body: |
+            Baixe o arquivo **MeuShape-v1.0.${{ github.run_number }}.apk** abaixo e abra no celular.
+            Instala por cima da versão anterior, sem perder seus dados.
