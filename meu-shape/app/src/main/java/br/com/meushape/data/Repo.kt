@@ -59,6 +59,7 @@ class Repo(private val ctx: Context) {
             db.marmitas().salvarEstoque(novo)
             if (novo != e && novo.total <= 2) Avisos.estoqueBaixo(ctx, novo)
         }
+        br.com.meushape.notify.WidgetProvider.atualizar(ctx)
     }
 
     /** Desmarca e devolve a marmita para a geladeira, se tinha sido baixada. */
@@ -133,6 +134,69 @@ class Repo(private val ctx: Context) {
     fun observarSonoConfirmado(): Flow<List<Periodo>> =
         db.sono().observarConfirmados(System.currentTimeMillis() - 8L * 24 * 3600 * 1000)
             .map { l -> l.map { Periodo(it.inicio.ldt(), it.fim.ldt()) } }
+
+    // ---- Sequência de dias cumprindo dieta e treino ----
+
+    /** Dia cumprido = todas as refeições marcadas (refeição livre vale) e o treino/caminhada feito. */
+    suspend fun diaCumprido(dia: LocalDate, escala: Escala): Boolean {
+        val itens = plano(escala.tipo(dia)).filter {
+            it.tipo == TipoItem.REFEICAO || it.tipo == TipoItem.TREINO || it.tipo == TipoItem.TREINO_FOLGA
+        }
+        if (itens.isEmpty()) return false
+        val feitos = db.feitos().listarPeriodo(dia.toString(), dia.toString()).map { it.itemId }.toSet()
+        return itens.all { it.id in feitos }
+    }
+
+    /** Dias seguidos cumpridos até ontem, mais hoje se hoje já estiver completo. */
+    suspend fun sequencia(hoje: LocalDate): Int {
+        val escala = escala()
+        var n = if (diaCumprido(hoje, escala)) 1 else 0
+        var d = hoje.minusDays(1)
+        while (n < 1000 && diaCumprido(d, escala)) { n++; d = d.minusDays(1) }
+        return n
+    }
+
+    // ---- Resumo semanal ----
+
+    data class Resumo(
+        val segunda: LocalDate,
+        val pesoMedio: Double?,
+        val treinos: Int,
+        val refeicoesFeitas: Int,
+        val refeicoesPlanejadas: Int,
+        val sonoMedioMin: Long,
+        val gastoCompras: Double,
+        val passosMedios: Int,
+    )
+
+    suspend fun resumoSemana(segunda: LocalDate): Resumo {
+        val domingo = segunda.plusDays(6)
+        val pesos = db.progresso().pesosEntre(segunda.toString(), domingo.toString())
+        val escala = escala()
+        var treinos = 0; var refFeitas = 0; var refPlan = 0
+        var d = segunda
+        while (!d.isAfter(domingo)) {
+            val itens = plano(escala.tipo(d))
+            val feitos = db.feitos().listarPeriodo(d.toString(), d.toString()).map { it.itemId }.toSet()
+            itens.forEach {
+                when (it.tipo) {
+                    TipoItem.REFEICAO -> { refPlan++; if (it.id in feitos) refFeitas++ }
+                    TipoItem.TREINO, TipoItem.TREINO_FOLGA -> if (it.id in feitos) treinos++
+                }
+            }
+            d = d.plusDays(1)
+        }
+        val ini = segunda.atStartOfDay(); val fim = domingo.plusDays(1).atStartOfDay()
+        val sono = db.sono().confirmados(ini.ms() - 86_400_000L).map { Periodo(it.inicio.ldt(), it.fim.ldt()) }
+        val sonoMedio = SonoCalc.minutosNaJanela(sono, ini, fim) / 7
+        val periodos = listOf(periodo(Lista.SEMANAL, segunda))
+        val gasto = db.compras().listarMarcadas(periodos).sumOf { it.valor }
+        val passos = db.sono().passosNoPeriodo(segunda.toString(), domingo.toString())
+        return Resumo(
+            segunda, pesos.takeIf { it.isNotEmpty() }?.map { it.kg }?.average(), treinos, refFeitas, refPlan,
+            sonoMedio, gasto, if (passos.isEmpty()) 0 else passos.sumOf { it.passos } / 7,
+        )
+    }
 
     // ---- Marmitas ----
 

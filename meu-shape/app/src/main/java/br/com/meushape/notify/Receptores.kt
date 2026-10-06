@@ -41,6 +41,7 @@ class AlarmeReceiver : BroadcastReceiver() {
             if (!jaFeito) mostrar(ctx, a)
         }
         Alarmes.agendarProximo(ctx, momento)
+        WidgetProvider.atualizar(ctx)
     }
 
     private fun mostrar(ctx: Context, a: Alarmes.Agendado) {
@@ -93,6 +94,8 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) = emSegundoPlano {
         Repo.get(ctx).prepararPrimeiraVez()
         Alarmes.agendarProximo(ctx)
+        ResumoSemanal.agendar(ctx)
         br.com.meushape.service.MonitorService.iniciar(ctx)
+        WidgetProvider.atualizar(ctx)
     }
 }

@@ -209,3 +209,35 @@ data class PassosDia(
     @PrimaryKey val data: String,
     val passos: Int,
 )
+
+// ---------------- Etapa 5: progresso ----------------
+
+/** Peso em jejum de um dia. */
+@Entity(tableName = "peso")
+data class Peso(
+    @PrimaryKey val data: String,
+    val kg: Double,
+)
+
+/** Medida da cintura (semanal). */
+@Entity(tableName = "cintura")
+data class Cintura(
+    @PrimaryKey val data: String,
+    val cm: Double,
+)
+
+object Angulo {
+    const val FRENTE = "FRENTE"
+    const val LADO = "LADO"
+    const val COSTAS = "COSTAS"
+    val TODOS = listOf(FRENTE to "Frente", LADO to "Lado", COSTAS to "Costas")
+}
+
+/** Foto de progresso salva na memória interna do app. */
+@Entity(tableName = "foto")
+data class Foto(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val data: String,
+    val angulo: String,
+    val arquivo: String,
+)

@@ -118,6 +118,10 @@ fun HojeScreen(abrirCalendario: () -> Unit, abrirRotina: () -> Unit) {
     val passos by remember(agora.toLocalDate()) { repo.db.sono().observarPassos(agora.toLocalDate().toString()) }
         .collectAsState(initial = null)
 
+    // Sequência de dias cumprindo dieta e treino (recalcula quando algo é marcado).
+    var sequencia by remember { mutableStateOf(0) }
+    LaunchedEffect(feitosSemana, dia) { sequencia = repo.sequencia(dia) }
+
     val feitosHoje = feitosSemana.filter { it.data == dia.toString() }.associateBy { it.itemId }
     val livreUsada = feitosSemana.firstOrNull { it.refeicaoLivre }
     var escolhendoOpcao by remember { mutableStateOf<ItemPlano?>(null) }
@@ -147,6 +151,9 @@ fun HojeScreen(abrirCalendario: () -> Unit, abrirRotina: () -> Unit) {
                             color = corDoTipo(info.tipo),
                         )
                         if (info.trocado) Text("  (trocado)", color = Cinza)
+                        Spacer(Modifier.weight(1f))
+                        Text("🔥 $sequencia", fontSize = 26.sp, fontWeight = FontWeight.Bold,
+                            color = if (sequencia > 0) Laranja else Cinza)
                     }
                     Text(
                         when {
@@ -155,6 +162,11 @@ fun HojeScreen(abrirCalendario: () -> Unit, abrirRotina: () -> Unit) {
                             else -> "Hoje é dia de caminhada de manhã"
                         },
                         style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Text(
+                        if (sequencia == 0) "Sequência: cumpra todas as refeições e o treino de hoje para começar"
+                        else "Sequência: $sequencia ${if (sequencia == 1) "dia" else "dias seguidos"} cumprindo dieta e treino",
+                        color = Cinza, style = MaterialTheme.typography.bodySmall,
                     )
                 }
             }

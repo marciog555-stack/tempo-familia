@@ -46,6 +46,30 @@
         </service>
 
         <receiver android:name=".notify.AlarmeReceiver" android:exported="false" />
+        <receiver android:name=".notify.ResumoReceiver" android:exported="false" />
+
+        <receiver
+            android:name=".notify.WidgetProvider"
+            android:exported="true"
+            android:label="Meu Shape">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info" />
+        </receiver>
+
+        <!-- Fotos de progresso: a câmera grava direto na memória interna do app. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="br.com.meushape.arquivos"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/arquivos" />
+        </provider>
         <receiver android:name=".notify.FeitoReceiver" android:exported="false" />
         <receiver
             android:name=".notify.BootReceiver"

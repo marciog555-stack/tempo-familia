@@ -271,3 +271,36 @@ interface SonoDao {
     @Upsert
     suspend fun salvarPassos(p: PassosDia)
 }
+
+@Dao
+interface ProgressoDao {
+    @Query("SELECT * FROM peso ORDER BY data")
+    fun observarPesos(): Flow<List<Peso>>
+
+    @Query("SELECT * FROM peso WHERE data BETWEEN :de AND :ate")
+    suspend fun pesosEntre(de: String, ate: String): List<Peso>
+
+    @Upsert
+    suspend fun salvarPeso(p: Peso)
+
+    @Delete
+    suspend fun apagarPeso(p: Peso)
+
+    @Query("SELECT * FROM cintura ORDER BY data")
+    fun observarCintura(): Flow<List<Cintura>>
+
+    @Upsert
+    suspend fun salvarCintura(c: Cintura)
+
+    @Delete
+    suspend fun apagarCintura(c: Cintura)
+
+    @Query("SELECT * FROM foto ORDER BY data DESC, angulo")
+    fun observarFotos(): Flow<List<Foto>>
+
+    @Insert
+    suspend fun inserirFoto(f: Foto)
+
+    @Delete
+    suspend fun apagarFoto(f: Foto)
+}

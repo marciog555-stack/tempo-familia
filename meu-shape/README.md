@@ -8,7 +8,7 @@ na escala de trabalho 12x36. Sem login, sem servidor, sem internet: tudo fica no
 2. ✅ Compras e marmitas
 3. ✅ Treinos
 4. ✅ Sono e passos
-5. Progresso, fotos, backup, sequência, widget e resumo de domingo
+5. ✅ Progresso, fotos, backup, sequência, widget e resumo de domingo
 
 ## Compilação
 O workflow `.github/workflows/meu-shape.yml` gera o APK de debug a cada push que mexe nesta pasta

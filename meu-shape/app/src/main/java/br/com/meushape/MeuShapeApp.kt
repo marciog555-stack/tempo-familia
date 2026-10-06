@@ -18,6 +18,7 @@ class MeuShapeApp : Application() {
         escopo.launch {
             Repo.get(this@MeuShapeApp).prepararPrimeiraVez()
             Alarmes.agendarProximo(this@MeuShapeApp)
+            br.com.meushape.notify.ResumoSemanal.agendar(this@MeuShapeApp)
         }
     }
 }

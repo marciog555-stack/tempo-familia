@@ -31,8 +31,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import br.com.meushape.ui.screens.ComprasAba
-import br.com.meushape.ui.screens.EmBreve
 import br.com.meushape.ui.screens.HojeAba
+import br.com.meushape.ui.screens.ProgressoAba
 import br.com.meushape.ui.screens.PerguntaSono
 import br.com.meushape.ui.screens.SonoAba
 import br.com.meushape.service.MonitorService
@@ -40,6 +40,11 @@ import br.com.meushape.ui.screens.TreinosAba
 import br.com.meushape.ui.theme.TemaMeuShape
 
 class MainActivity : ComponentActivity() {
+    override fun onStop() {
+        super.onStop()
+        br.com.meushape.notify.WidgetProvider.atualizar(this)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -89,7 +94,7 @@ private fun Principal() {
                 1 -> TreinosAba()
                 2 -> ComprasAba()
                 3 -> SonoAba()
-                else -> EmBreve("Progresso", 5)
+                else -> ProgressoAba()
             }
         }
     }
