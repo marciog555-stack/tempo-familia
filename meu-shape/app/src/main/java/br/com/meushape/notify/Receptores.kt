@@ -93,5 +93,6 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) = emSegundoPlano {
         Repo.get(ctx).prepararPrimeiraVez()
         Alarmes.agendarProximo(ctx)
+        br.com.meushape.service.MonitorService.iniciar(ctx)
     }
 }

@@ -114,6 +114,9 @@ fun HojeScreen(abrirCalendario: () -> Unit, abrirRotina: () -> Unit) {
     val feitosSemana by remember(dia) { repo.observarFeitosDaSemana(dia) }.collectAsState(initial = emptyList())
     val agua by remember(dia) { repo.db.agua().observar(dia.toString()) }.collectAsState(initial = null)
     val estoque by remember { repo.db.marmitas().observarEstoque() }.collectAsState(initial = emptyList())
+    val sono by remember { repo.observarSonoConfirmado() }.collectAsState(initial = emptyList())
+    val passos by remember(agora.toLocalDate()) { repo.db.sono().observarPassos(agora.toLocalDate().toString()) }
+        .collectAsState(initial = null)
 
     val feitosHoje = feitosSemana.filter { it.data == dia.toString() }.associateBy { it.itemId }
     val livreUsada = feitosSemana.firstOrNull { it.refeicaoLivre }
@@ -171,6 +174,27 @@ fun HojeScreen(abrirCalendario: () -> Unit, abrirRotina: () -> Unit) {
                         Text("${if (it.tipo == "ALMOCO") "Almoço" else "Janta"}: ${it.total} restante(s)")
                     }
                     Text("Monte mais na aba Compras → Marmitas.", color = Cinza)
+                }
+            }
+        }
+        item {
+            val sono24 = br.com.meushape.logic.SonoCalc.ultimas24h(sono, agora)
+            val p = passos?.passos ?: 0
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                CartaoApp(Modifier.weight(1f)) {
+                    Text("👟 Passos", color = Cinza)
+                    Text("%,d".format(p).replace(',', '.'), fontSize = 24.sp, fontWeight = FontWeight.Bold,
+                        color = if (p >= 8000) Limao else MaterialTheme.colorScheme.onSurface)
+                    LinearProgressIndicator(progress = { (p / 8000f).coerceAtMost(1f) }, modifier = Modifier.fillMaxWidth())
+                    Text("meta 8.000", color = Cinza, fontSize = 12.sp)
+                }
+                CartaoApp(Modifier.weight(1f)) {
+                    Text("😴 Sono 24h", color = Cinza)
+                    Text(horas(sono24), fontSize = 24.sp, fontWeight = FontWeight.Bold,
+                        color = if (sono24 < 420) Laranja else Limao)
+                    LinearProgressIndicator(progress = { (sono24 / 420f).coerceAtMost(1f) },
+                        color = if (sono24 < 420) Laranja else Limao, modifier = Modifier.fillMaxWidth())
+                    Text(if (sono24 < 420) "abaixo de 7h" else "meta 7h", color = Cinza, fontSize = 12.sp)
                 }
             }
         }

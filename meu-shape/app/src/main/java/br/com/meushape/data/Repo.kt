@@ -3,12 +3,17 @@ package br.com.meushape.data
 import android.content.Context
 import br.com.meushape.logic.AtividadeFolga
 import br.com.meushape.logic.Escala
+import br.com.meushape.logic.Horario
+import br.com.meushape.logic.Periodo
+import br.com.meushape.logic.SonoCalc
 import br.com.meushape.logic.TipoDia
 import br.com.meushape.logic.TrocaDia
 import br.com.meushape.notify.Avisos
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
 
 /** Ponto único de acesso aos dados. */
@@ -92,6 +97,42 @@ class Repo(private val ctx: Context) {
         db.treinos().apagarSeriesDaSessao(sessaoId)
         db.treinos().apagarSessao(sessaoId)
     }
+
+    // ---- Sono ----
+
+    suspend fun limiteSonoMin(): Int = db.config().ler("sono_limite_min")?.toIntOrNull() ?: 25
+
+    /** Períodos que nunca contam como sono: plantão, treino (planejado e feito) e registros já existentes. */
+    suspend fun exclusoesSono(de: LocalDateTime, ate: LocalDateTime): List<Periodo> {
+        val escala = escala()
+        val lista = escala.periodosDePlantao(de, ate).map { Periodo(it.first, it.second) }.toMutableList()
+        var dia = Escala.diaLogico(de).minusDays(1)
+        while (!dia.isAfter(ate.toLocalDate())) {
+            plano(escala.tipo(dia)).filter { it.tipo == TipoItem.TREINO || it.tipo == TipoItem.TREINO_FOLGA }.forEach {
+                lista += Periodo(Horario.momento(dia, it.inicioMin), Horario.momento(dia, it.fimMin ?: (it.inicioMin + 60)))
+            }
+            dia = dia.plusDays(1)
+        }
+        val deMs = de.ms(); val ateMs = ate.ms()
+        db.treinos().sessoesEntre(deMs, ateMs).forEach {
+            lista += Periodo(it.inicio.ldt(), (it.fim ?: System.currentTimeMillis()).ldt())
+        }
+        db.sono().sobrepostos(deMs, ateMs).forEach { lista += Periodo(it.inicio.ldt(), it.fim.ldt()) }
+        return lista
+    }
+
+    /** Chamado quando o telefone volta a ser usado: cria registros de sono pendentes de confirmação. */
+    suspend fun processarVoltaDeUso(fimUltimoUso: Long, agora: Long) {
+        val de = fimUltimoUso.ldt(); val ate = agora.ldt()
+        val detectados = SonoCalc.detectar(de, ate, limiteSonoMin(), exclusoesSono(de, ate))
+        if (detectados.isNotEmpty()) {
+            db.sono().inserir(detectados.map { RegistroSono(inicio = it.ini.ms(), fim = it.fim.ms(), status = StatusSono.PENDENTE) })
+        }
+    }
+
+    fun observarSonoConfirmado(): Flow<List<Periodo>> =
+        db.sono().observarConfirmados(System.currentTimeMillis() - 8L * 24 * 3600 * 1000)
+            .map { l -> l.map { Periodo(it.inicio.ldt(), it.fim.ldt()) } }
 
     // ---- Marmitas ----
 
@@ -179,5 +220,11 @@ object Perfil {
         "gordura" to "55",
         "copo_ml" to "250",
         "meta_agua_ml" to "3000",
+        "sono_limite_min" to "25",
+        "meta_passos" to "8000",
     )
 }
+
+/** Conversões entre epoch ms e data/hora local. */
+fun LocalDateTime.ms(): Long = atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+fun Long.ldt(): LocalDateTime = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(this), ZoneId.systemDefault())

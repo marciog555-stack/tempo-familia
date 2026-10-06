@@ -199,6 +199,9 @@ interface TreinoDao {
     @Query("DELETE FROM sessao_treino WHERE id = :id")
     suspend fun apagarSessao(id: Long)
 
+    @Query("SELECT * FROM sessao_treino WHERE inicio < :ate AND (fim IS NULL OR fim > :de)")
+    suspend fun sessoesEntre(de: Long, ate: Long): List<SessaoTreino>
+
     @Query("SELECT * FROM sessao_treino WHERE fim IS NOT NULL AND data BETWEEN :de AND :ate")
     suspend fun sessoesNoPeriodo(de: String, ate: String): List<SessaoTreino>
 
@@ -231,4 +234,40 @@ interface TreinoDao {
 
     @Query("SELECT DISTINCT exercicioId FROM serie_feita")
     fun observarExerciciosComHistorico(): Flow<List<Long>>
+}
+
+@Dao
+interface SonoDao {
+    @Query("SELECT * FROM registro_sono WHERE fim >= :desde ORDER BY inicio DESC")
+    fun observarDesde(desde: Long): Flow<List<RegistroSono>>
+
+    @Query("SELECT * FROM registro_sono WHERE status = 'CONFIRMADO' AND fim >= :desde")
+    fun observarConfirmados(desde: Long): Flow<List<RegistroSono>>
+
+    @Query("SELECT * FROM registro_sono WHERE status = 'CONFIRMADO' AND fim >= :desde")
+    suspend fun confirmados(desde: Long): List<RegistroSono>
+
+    @Query("SELECT * FROM registro_sono WHERE status = 'PENDENTE' ORDER BY inicio")
+    fun observarPendentes(): Flow<List<RegistroSono>>
+
+    @Query("SELECT * FROM registro_sono WHERE fim > :de AND inicio < :ate")
+    suspend fun sobrepostos(de: Long, ate: Long): List<RegistroSono>
+
+    @Upsert
+    suspend fun salvar(r: RegistroSono)
+
+    @Insert
+    suspend fun inserir(lista: List<RegistroSono>)
+
+    @Delete
+    suspend fun apagar(r: RegistroSono)
+
+    @Query("SELECT * FROM passos WHERE data = :data")
+    fun observarPassos(data: String): Flow<PassosDia?>
+
+    @Query("SELECT * FROM passos WHERE data BETWEEN :de AND :ate")
+    suspend fun passosNoPeriodo(de: String, ate: String): List<PassosDia>
+
+    @Upsert
+    suspend fun salvarPassos(p: PassosDia)
 }

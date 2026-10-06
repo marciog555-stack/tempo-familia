@@ -33,6 +33,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import br.com.meushape.ui.screens.ComprasAba
 import br.com.meushape.ui.screens.EmBreve
 import br.com.meushape.ui.screens.HojeAba
+import br.com.meushape.ui.screens.PerguntaSono
+import br.com.meushape.ui.screens.SonoAba
+import br.com.meushape.service.MonitorService
 import br.com.meushape.ui.screens.TreinosAba
 import br.com.meushape.ui.theme.TemaMeuShape
 
@@ -40,6 +43,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        MonitorService.iniciar(this)
         setContent { TemaMeuShape { Principal() } }
     }
 }
@@ -78,12 +82,13 @@ private fun Principal() {
             }
         }
     ) { padding ->
+        PerguntaSono()
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (aba) {
                 0 -> HojeAba()
                 1 -> TreinosAba()
                 2 -> ComprasAba()
-                3 -> EmBreve("Sono", 4)
+                3 -> SonoAba()
                 else -> EmBreve("Progresso", 5)
             }
         }

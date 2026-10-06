@@ -184,3 +184,28 @@ data class SerieFeita(
 
 /** Linha do histórico: maior carga de um exercício em cada sessão. */
 data class PontoCarga(val data: String, val cargaMax: Double, val series: Int)
+
+// ---------------- Etapa 4: sono e passos ----------------
+
+object StatusSono {
+    const val PENDENTE = "PENDENTE"
+    const val CONFIRMADO = "CONFIRMADO"
+    const val RECUSADO = "RECUSADO"
+}
+
+/** Registro de sono (detectado automaticamente ou manual). Horários em epoch ms. */
+@Entity(tableName = "registro_sono")
+data class RegistroSono(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val inicio: Long,
+    val fim: Long,
+    val status: String,
+    val manual: Boolean = false,
+)
+
+/** Passos de um dia (data do calendário). */
+@Entity(tableName = "passos")
+data class PassosDia(
+    @PrimaryKey val data: String,
+    val passos: Int,
+)

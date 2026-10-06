@@ -7,7 +7,7 @@ na escala de trabalho 12x36. Sem login, sem servidor, sem internet: tudo fica no
 1. ✅ Escala 12x36, calendário, tela Hoje com notificações, água e refeição livre
 2. ✅ Compras e marmitas
 3. ✅ Treinos
-4. Sono e passos
+4. ✅ Sono e passos
 5. Progresso, fotos, backup, sequência, widget e resumo de domingo
 
 ## Compilação
