@@ -136,3 +136,99 @@ interface MarmitaDao {
     @Query("SELECT * FROM marmita_montada WHERE data BETWEEN :de AND :ate")
     fun observarMontadas(de: String, ate: String): Flow<List<MarmitaMontada>>
 }
+
+@Dao
+interface TreinoDao {
+    // Biblioteca
+    @Query("SELECT * FROM exercicio ORDER BY grupo, nome")
+    fun observarExercicios(): Flow<List<Exercicio>>
+
+    @Query("SELECT COUNT(*) FROM exercicio")
+    suspend fun contarExercicios(): Int
+
+    @Insert
+    suspend fun inserirExercicios(lista: List<Exercicio>)
+
+    @Upsert
+    suspend fun salvarExercicio(e: Exercicio): Long
+
+    // Treinos
+    @Query("SELECT * FROM treino ORDER BY ordem, nome")
+    fun observarTreinos(): Flow<List<Treino>>
+
+    @Query("SELECT * FROM treino WHERE id = :id")
+    suspend fun treino(id: Long): Treino?
+
+    @Upsert
+    suspend fun salvarTreino(t: Treino): Long
+
+    @Delete
+    suspend fun apagarTreino(t: Treino)
+
+    @Query("DELETE FROM treino_exercicio WHERE treinoId = :treinoId")
+    suspend fun limparItens(treinoId: Long)
+
+    @Query("SELECT * FROM treino_exercicio WHERE treinoId = :treinoId ORDER BY ordem")
+    fun observarItens(treinoId: Long): Flow<List<TreinoExercicio>>
+
+    @Query("SELECT * FROM treino_exercicio ORDER BY ordem")
+    fun observarTodosItens(): Flow<List<TreinoExercicio>>
+
+    @Query("SELECT * FROM treino_exercicio WHERE treinoId = :treinoId ORDER BY ordem")
+    suspend fun itens(treinoId: Long): List<TreinoExercicio>
+
+    @Upsert
+    suspend fun salvarItem(i: TreinoExercicio)
+
+    @Delete
+    suspend fun apagarItem(i: TreinoExercicio)
+
+    // Sessões
+    @Insert
+    suspend fun criarSessao(s: SessaoTreino): Long
+
+    @Query("SELECT * FROM sessao_treino WHERE id = :id")
+    fun observarSessao(id: Long): Flow<SessaoTreino?>
+
+    @Query("SELECT * FROM sessao_treino WHERE fim IS NULL ORDER BY inicio DESC LIMIT 1")
+    fun observarSessaoAberta(): Flow<SessaoTreino?>
+
+    @Query("UPDATE sessao_treino SET fim = :fim WHERE id = :id")
+    suspend fun encerrarSessao(id: Long, fim: Long)
+
+    @Query("DELETE FROM sessao_treino WHERE id = :id")
+    suspend fun apagarSessao(id: Long)
+
+    @Query("SELECT * FROM sessao_treino WHERE fim IS NOT NULL AND data BETWEEN :de AND :ate")
+    suspend fun sessoesNoPeriodo(de: String, ate: String): List<SessaoTreino>
+
+    // Séries
+    @Query("SELECT * FROM serie_feita WHERE sessaoId = :sessaoId")
+    fun observarSeries(sessaoId: Long): Flow<List<SerieFeita>>
+
+    @Insert
+    suspend fun inserirSerie(s: SerieFeita)
+
+    @Query("DELETE FROM serie_feita WHERE sessaoId = :sessaoId AND exercicioId = :exercicioId AND numero = :numero")
+    suspend fun apagarSerie(sessaoId: Long, exercicioId: Long, numero: Int)
+
+    @Query("DELETE FROM serie_feita WHERE sessaoId = :sessaoId")
+    suspend fun apagarSeriesDaSessao(sessaoId: Long)
+
+    /** Última carga usada em cada exercício (para sugerir na próxima vez). */
+    @Query(
+        "SELECT s.* FROM serie_feita s WHERE s.id IN " +
+            "(SELECT MAX(id) FROM serie_feita GROUP BY exercicioId)"
+    )
+    suspend fun ultimasSeries(): List<SerieFeita>
+
+    @Query(
+        "SELECT t.data AS data, MAX(s.carga) AS cargaMax, COUNT(*) AS series FROM serie_feita s " +
+            "JOIN sessao_treino t ON t.id = s.sessaoId WHERE s.exercicioId = :exercicioId " +
+            "GROUP BY s.sessaoId ORDER BY t.inicio"
+    )
+    fun observarHistorico(exercicioId: Long): Flow<List<PontoCarga>>
+
+    @Query("SELECT DISTINCT exercicioId FROM serie_feita")
+    fun observarExerciciosComHistorico(): Flow<List<Long>>
+}

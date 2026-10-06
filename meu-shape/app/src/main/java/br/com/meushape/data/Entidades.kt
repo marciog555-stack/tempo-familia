@@ -119,3 +119,68 @@ data class MarmitaMontada(
     val tipo: String,
     val quantidade: Int,
 )
+
+// ---------------- Etapa 3: treinos ----------------
+
+object Grupo {
+    val TODOS = listOf(
+        "Peito", "Costas", "Ombros", "Bíceps", "Tríceps", "Quadríceps",
+        "Posterior", "Glúteos", "Panturrilha", "Abdômen", "Cardio",
+    )
+}
+
+/** Exercício da biblioteca. */
+@Entity(tableName = "exercicio")
+data class Exercicio(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val nome: String,
+    val grupo: String,
+    val personalizado: Boolean = false,
+)
+
+/** Treino montado (A, B, C...). */
+@Entity(tableName = "treino")
+data class Treino(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val nome: String,
+    val observacao: String = "",
+    val ordem: Int = 0,
+)
+
+/** Exercício dentro de um treino, com séries, repetições, carga e descanso. */
+@Entity(tableName = "treino_exercicio")
+data class TreinoExercicio(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val treinoId: Long,
+    val exercicioId: Long,
+    val ordem: Int = 0,
+    val series: Int = 3,
+    val repeticoes: String = "10",
+    val carga: Double = 0.0,
+    val descansoSeg: Int = 60,
+)
+
+/** Uma vez que o treino foi feito. */
+@Entity(tableName = "sessao_treino")
+data class SessaoTreino(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val treinoId: Long,
+    val data: String,
+    val inicio: Long,
+    val fim: Long? = null,
+)
+
+/** Série feita durante uma sessão. */
+@Entity(tableName = "serie_feita")
+data class SerieFeita(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val sessaoId: Long,
+    val exercicioId: Long,
+    val numero: Int,
+    val carga: Double,
+    val repeticoes: Int,
+    val feitaEm: Long,
+)
+
+/** Linha do histórico: maior carga de um exercício em cada sessão. */
+data class PontoCarga(val data: String, val cargaMax: Double, val series: Int)

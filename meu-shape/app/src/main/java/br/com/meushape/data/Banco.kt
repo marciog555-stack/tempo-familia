@@ -14,10 +14,11 @@ import androidx.room.RoomDatabase
     entities = [
         ItemPlano::class, Feito::class, TrocaDiaEntity::class, Agua::class, Config::class,
         ItemCompra::class, CompraMarcada::class, EstoqueMarmita::class, MarmitaMontada::class,
+        Exercicio::class, Treino::class, TreinoExercicio::class, SessaoTreino::class, SerieFeita::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2)],
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
 )
 abstract class Banco : RoomDatabase() {
     abstract fun plano(): PlanoDao
@@ -27,6 +28,7 @@ abstract class Banco : RoomDatabase() {
     abstract fun config(): ConfigDao
     abstract fun compras(): ComprasDao
     abstract fun marmitas(): MarmitaDao
+    abstract fun treinos(): TreinoDao
 
     companion object {
         @Volatile private var instancia: Banco? = null

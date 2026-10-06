@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import br.com.meushape.ui.screens.ComprasAba
 import br.com.meushape.ui.screens.EmBreve
 import br.com.meushape.ui.screens.HojeAba
+import br.com.meushape.ui.screens.TreinosAba
 import br.com.meushape.ui.theme.TemaMeuShape
 
 class MainActivity : ComponentActivity() {
@@ -80,7 +81,7 @@ private fun Principal() {
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (aba) {
                 0 -> HojeAba()
-                1 -> EmBreve("Treinos", 3)
+                1 -> TreinosAba()
                 2 -> ComprasAba()
                 3 -> EmBreve("Sono", 4)
                 else -> EmBreve("Progresso", 5)

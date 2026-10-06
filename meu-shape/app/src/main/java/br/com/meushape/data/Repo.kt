@@ -28,6 +28,10 @@ class Repo(private val ctx: Context) {
             if (db.compras().contar() == 0) db.compras().inserir(ComprasPadrao.itens())
             db.config().salvar(Config("compras_criadas", "1"))
         }
+        if (db.config().ler("exercicios_criados") == null) {
+            if (db.treinos().contarExercicios() == 0) db.treinos().inserirExercicios(ExerciciosPadrao.todos())
+            db.config().salvar(Config("exercicios_criados", "1"))
+        }
         listOf(Marmita.ALMOCO, Marmita.JANTA).forEach {
             if (db.marmitas().estoque(it) == null) db.marmitas().salvarEstoque(EstoqueMarmita(it))
         }
@@ -61,6 +65,32 @@ class Repo(private val ctx: Context) {
             val e = db.marmitas().estoque(item.marmita) ?: EstoqueMarmita(item.marmita)
             db.marmitas().salvarEstoque(e.copy(geladeira = e.geladeira + 1))
         }
+    }
+
+    // ---- Treinos ----
+
+    /** Começa uma sessão de treino (ou devolve a que já está aberta). */
+    suspend fun comecarTreino(treinoId: Long): Long =
+        db.treinos().criarSessao(
+            SessaoTreino(treinoId = treinoId, data = Escala.diaLogico(java.time.LocalDateTime.now()).toString(),
+                inicio = System.currentTimeMillis())
+        )
+
+    /** Encerra o treino e marca o item de treino do dia como feito na tela Hoje. */
+    suspend fun encerrarTreino(sessao: SessaoTreino) {
+        db.treinos().encerrarSessao(sessao.id, System.currentTimeMillis())
+        val dia = LocalDate.parse(sessao.data)
+        val escala = escala()
+        val item = plano(escala.tipo(dia)).firstOrNull {
+            it.tipo == TipoItem.TREINO || it.tipo == TipoItem.TREINO_FOLGA
+        } ?: return
+        val ja = db.feitos().listarPeriodo(sessao.data, sessao.data).any { it.itemId == item.id }
+        if (!ja) marcarFeito(dia, item.id, db.treinos().treino(sessao.treinoId)?.let { "Treino ${it.nome}" } ?: "")
+    }
+
+    suspend fun descartarTreino(sessaoId: Long) {
+        db.treinos().apagarSeriesDaSessao(sessaoId)
+        db.treinos().apagarSessao(sessaoId)
     }
 
     // ---- Marmitas ----
