@@ -121,7 +121,8 @@ private fun ListaTreinosScreen(
     val exercicios by remember { repo.db.treinos().observarExercicios() }.collectAsState(initial = emptyList())
     val nomes = exercicios.associate { it.id to it.nome }
     var explicandoAdaptacao by remember { mutableStateOf(false) }
-    val temAdaptacao = treinos.any { it.nome.startsWith("Adaptação") }
+    val temAdaptacao = treinos.any { it.nome == "Adaptação A" } && treinos.any { it.nome == "Adaptação B" }
+    var apagando by remember { mutableStateOf<Treino?>(null) }
 
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -150,7 +151,8 @@ private fun ListaTreinosScreen(
             item {
                 CartaoApp(cor = Limao.copy(alpha = 0.12f)) {
                     Text("Ainda não tem um treino montado?", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    Text("Comece pelo treino de adaptação pronto: corpo inteiro, em duas partes (A e B) para alternar.")
+                    Text("Comece pelo treino de adaptação pronto: corpo inteiro, em duas partes (A e B) para alternar. " +
+                        "Se apagou um deles, aqui você cria de novo.")
                     Spacer(Modifier.height(8.dp))
                     Button(onClick = { explicandoAdaptacao = true }, modifier = Modifier.fillMaxWidth().height(56.dp)) {
                         Text("Usar treino de adaptação")
@@ -185,6 +187,7 @@ private fun ListaTreinosScreen(
                     ) { Text("Começar") }
                     OutlinedButton(onClick = { onEditar(t.id) }, modifier = Modifier.weight(1f).height(56.dp)) { Text("Editar") }
                 }
+                TextButton(onClick = { apagando = t }) { Text("Apagar este treino", color = Vermelho) }
             }
         }
         item {
@@ -205,6 +208,24 @@ private fun ListaTreinosScreen(
         }
     }
 
+    apagando?.let { t ->
+        AlertDialog(
+            onDismissRequest = { apagando = null },
+            title = { Text("Apagar ${if (t.nome.startsWith("Adaptação")) t.nome else "o treino " + t.nome}?") },
+            text = { Text("O treino sai da lista. O histórico de cargas dos exercícios continua guardado.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    apagando = null
+                    scope.launch {
+                        if (sessaoAberta?.treinoId == t.id) repo.descartarTreino(sessaoAberta.id)
+                        repo.db.treinos().limparItens(t.id)
+                        repo.db.treinos().apagarTreino(t)
+                    }
+                }) { Text("Apagar", color = Vermelho) }
+            },
+            dismissButton = { TextButton(onClick = { apagando = null }) { Text("Cancelar") } },
+        )
+    }
     if (explicandoAdaptacao) {
         AdaptacaoDialog(
             jaCriado = temAdaptacao,
@@ -747,9 +768,30 @@ private fun HistoricoScreen(onVoltar: () -> Unit) {
         return
     }
 
+    val scope = rememberCoroutineScope()
+    val sessoes by remember { dao.observarSessoesFeitas() }.collectAsState(initial = emptyList())
+    val treinos by remember { dao.observarTreinos() }.collectAsState(initial = emptyList())
+    var apagandoSessao by remember { mutableStateOf<SessaoTreino?>(null) }
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
             TextButton(onClick = onVoltar) { Text("← Voltar") }
+            Text("Treinos feitos", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text("Registrou no treino errado? Apague aqui.", color = Cinza)
+        }
+        if (sessoes.isEmpty()) item { Text("Nenhum treino finalizado ainda.", color = Cinza) }
+        items(sessoes, key = { "s" + it.id }) { s ->
+            val nome = treinos.firstOrNull { it.id == s.treinoId }?.nome ?: "apagado"
+            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("${LocalDate.parse(s.data).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))} · $nome", fontWeight = FontWeight.SemiBold)
+                    s.fim?.let { Text("${(it - s.inicio) / 60000} min", color = Cinza) }
+                }
+                TextButton(onClick = { apagandoSessao = s }) { Text("Apagar", color = Vermelho) }
+            }
+            HorizontalDivider()
+        }
+        item {
+            Spacer(Modifier.height(12.dp))
             Text("Histórico por exercício", fontSize = 24.sp, fontWeight = FontWeight.Bold)
         }
         val lista = exercicios.filter { it.id in comHistorico }
@@ -760,5 +802,20 @@ private fun HistoricoScreen(onVoltar: () -> Unit) {
                 Text(ex.grupo, color = Cinza)
             }
         }
+        item { Spacer(Modifier.height(24.dp)) }
+    }
+    apagandoSessao?.let { s ->
+        AlertDialog(
+            onDismissRequest = { apagandoSessao = null },
+            title = { Text("Apagar este treino feito?") },
+            text = { Text("As séries e cargas registradas nele serão apagadas do histórico.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    apagandoSessao = null
+                    scope.launch { repo.descartarTreino(s.id) }
+                }) { Text("Apagar", color = Vermelho) }
+            },
+            dismissButton = { TextButton(onClick = { apagandoSessao = null }) { Text("Cancelar") } },
+        )
     }
 }

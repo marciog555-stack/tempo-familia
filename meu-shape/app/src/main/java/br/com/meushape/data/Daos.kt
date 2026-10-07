@@ -202,6 +202,9 @@ interface TreinoDao {
     @Query("SELECT * FROM sessao_treino WHERE inicio < :ate AND (fim IS NULL OR fim > :de)")
     suspend fun sessoesEntre(de: Long, ate: Long): List<SessaoTreino>
 
+    @Query("SELECT * FROM sessao_treino WHERE fim IS NOT NULL ORDER BY inicio DESC LIMIT 60")
+    fun observarSessoesFeitas(): Flow<List<SessaoTreino>>
+
     @Query("SELECT * FROM sessao_treino WHERE fim IS NOT NULL AND data BETWEEN :de AND :ate")
     suspend fun sessoesNoPeriodo(de: String, ate: String): List<SessaoTreino>
 
