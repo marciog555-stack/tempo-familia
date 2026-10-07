@@ -45,22 +45,41 @@ class Repo(private val ctx: Context) {
 
     // ---- Marcar refeições (com baixa automática de marmita) ----
 
-    /** Marca um item como feito. Se a refeição usa marmita, tira 1 do estoque (geladeira primeiro). */
-    suspend fun marcarFeito(dia: LocalDate, itemId: Long, opcao: String, livre: Boolean = false) {
-        val ja = db.feitos().listarPeriodo(dia.toString(), dia.toString()).any { it.itemId == itemId }
-        db.feitos().marcar(Feito(dia.toString(), itemId, System.currentTimeMillis(), opcao, livre))
-        val item = db.plano().buscar(itemId) ?: return
-        if (!ja && !livre && item.marmita.isNotEmpty()) {
-            val e = db.marmitas().estoque(item.marmita) ?: EstoqueMarmita(item.marmita)
-            val novo = when {
-                e.geladeira > 0 -> e.copy(geladeira = e.geladeira - 1)
-                e.freezer > 0 -> e.copy(freezer = e.freezer - 1)
-                else -> e
+    /** A marmita só sai do estoque quando a refeição prevista foi feita (não livre, não pulada, não "outra coisa"). */
+    private fun usouMarmita(f: Feito?, item: ItemPlano): Boolean =
+        f != null && item.marmita.isNotEmpty() && !f.refeicaoLivre && !f.pulado && !f.opcao.startsWith(Feito.OUTRO)
+
+    /**
+     * Marca um item como feito (ou como "não fiz", com [pulado]).
+     * Se a refeição usa marmita, tira 1 do estoque (geladeira primeiro); se mudar a marcação, devolve.
+     */
+    suspend fun marcarFeito(dia: LocalDate, itemId: Long, opcao: String, livre: Boolean = false, pulado: Boolean = false) {
+        val antes = db.feitos().listarPeriodo(dia.toString(), dia.toString()).firstOrNull { it.itemId == itemId }
+        val novo = Feito(dia.toString(), itemId, System.currentTimeMillis(), opcao, livre, pulado)
+        db.feitos().marcar(novo)
+        val item = db.plano().buscar(itemId)
+        if (item != null) {
+            val tinha = usouMarmita(antes, item)
+            val tem = usouMarmita(novo, item)
+            if (tem && !tinha) {
+                val e = db.marmitas().estoque(item.marmita) ?: EstoqueMarmita(item.marmita)
+                val depois = when {
+                    e.geladeira > 0 -> e.copy(geladeira = e.geladeira - 1)
+                    e.freezer > 0 -> e.copy(freezer = e.freezer - 1)
+                    else -> e
+                }
+                db.marmitas().salvarEstoque(depois)
+                if (depois != e && depois.total <= 2) Avisos.estoqueBaixo(ctx, depois)
+            } else if (tinha && !tem) {
+                devolverMarmita(item.marmita)
             }
-            db.marmitas().salvarEstoque(novo)
-            if (novo != e && novo.total <= 2) Avisos.estoqueBaixo(ctx, novo)
         }
         br.com.meushape.notify.WidgetProvider.atualizar(ctx)
+    }
+
+    private suspend fun devolverMarmita(tipo: String) {
+        val e = db.marmitas().estoque(tipo) ?: EstoqueMarmita(tipo)
+        db.marmitas().salvarEstoque(e.copy(geladeira = e.geladeira + 1))
     }
 
     /** Desmarca e devolve a marmita para a geladeira, se tinha sido baixada. */
@@ -68,10 +87,8 @@ class Repo(private val ctx: Context) {
         val feito = db.feitos().listarPeriodo(dia.toString(), dia.toString()).firstOrNull { it.itemId == itemId } ?: return
         db.feitos().desmarcar(dia.toString(), itemId)
         val item = db.plano().buscar(itemId) ?: return
-        if (!feito.refeicaoLivre && item.marmita.isNotEmpty()) {
-            val e = db.marmitas().estoque(item.marmita) ?: EstoqueMarmita(item.marmita)
-            db.marmitas().salvarEstoque(e.copy(geladeira = e.geladeira + 1))
-        }
+        if (usouMarmita(feito, item)) devolverMarmita(item.marmita)
+        br.com.meushape.notify.WidgetProvider.atualizar(ctx)
     }
 
     // ---- Treinos ----
@@ -166,7 +183,7 @@ class Repo(private val ctx: Context) {
             it.tipo == TipoItem.REFEICAO || it.tipo == TipoItem.TREINO || it.tipo == TipoItem.TREINO_FOLGA
         }
         if (itens.isEmpty()) return false
-        val feitos = db.feitos().listarPeriodo(dia.toString(), dia.toString()).map { it.itemId }.toSet()
+        val feitos = db.feitos().listarPeriodo(dia.toString(), dia.toString()).filter { !it.pulado }.map { it.itemId }.toSet()
         return itens.all { it.id in feitos }
     }
 
@@ -200,7 +217,7 @@ class Repo(private val ctx: Context) {
         var d = segunda
         while (!d.isAfter(domingo)) {
             val itens = plano(escala.tipo(d))
-            val feitos = db.feitos().listarPeriodo(d.toString(), d.toString()).map { it.itemId }.toSet()
+            val feitos = db.feitos().listarPeriodo(d.toString(), d.toString()).filter { !it.pulado }.map { it.itemId }.toSet()
             itens.forEach {
                 when (it.tipo) {
                     TipoItem.REFEICAO -> { refPlan++; if (it.id in feitos) refFeitas++ }

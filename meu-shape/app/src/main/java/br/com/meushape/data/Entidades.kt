@@ -45,7 +45,14 @@ data class Feito(
     val quando: Long,             // epoch ms
     val opcao: String = "",
     val refeicaoLivre: Boolean = false,
-)
+    /** "Não fiz esta refeição": fica registrado, mas não conta como cumprido. */
+    @androidx.room.ColumnInfo(defaultValue = "0") val pulado: Boolean = false,
+) {
+    companion object {
+        /** Prefixo da opção "Comi outra coisa". */
+        const val OUTRO = "Outro: "
+    }
+}
 
 /** Troca manual do tipo do dia e/ou da atividade da folga. */
 @Entity(tableName = "troca_dia")

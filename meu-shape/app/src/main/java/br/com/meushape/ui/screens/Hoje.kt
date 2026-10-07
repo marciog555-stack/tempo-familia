@@ -2,6 +2,10 @@ package br.com.meushape.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.border
+import br.com.meushape.ui.theme.Vermelho
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -132,8 +136,10 @@ fun HojeScreen(abrirCalendario: () -> Unit, abrirRotina: () -> Unit) {
     var escolhendoOpcao by remember { mutableStateOf<ItemPlano?>(null) }
     var confirmandoLivre by remember { mutableStateOf<ItemPlano?>(null) }
 
-    fun marcar(item: ItemPlano, opcao: String = "", livre: Boolean = false) =
-        scope.launch { repo.marcarFeito(dia, item.id, opcao, livre) }
+    var escrevendoOutro by remember { mutableStateOf<ItemPlano?>(null) }
+
+    fun marcar(item: ItemPlano, opcao: String = "", livre: Boolean = false, pulado: Boolean = false) =
+        scope.launch { repo.marcarFeito(dia, item.id, opcao, livre, pulado) }
 
     val proximoId = plano.firstOrNull {
         it.id !in feitosHoje && Horario.momento(dia, it.fimMin ?: it.inicioMin).isAfter(agora)
@@ -217,7 +223,7 @@ fun HojeScreen(abrirCalendario: () -> Unit, abrirRotina: () -> Unit) {
         }
         item { CartaoAgua(agua, onMudar = { novo -> scope.launch { repo.db.agua().salvar(Agua(dia.toString(), novo)) } }) }
         item {
-            val feitos = plano.count { it.id in feitosHoje }
+            val feitos = plano.count { feitosHoje[it.id]?.pulado == false }
             CartaoApp {
                 Text("Rotina de hoje: $feitos de ${plano.size} feitos", fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(8.dp))
@@ -248,6 +254,7 @@ fun HojeScreen(abrirCalendario: () -> Unit, abrirRotina: () -> Unit) {
                 },
                 onDesmarcar = { scope.launch { repo.desmarcarFeito(dia, item.id) } },
                 onLivre = { confirmandoLivre = item },
+                onOutrasOpcoes = { escolhendoOpcao = item },
             )
         }
         item { Spacer(Modifier.height(24.dp)) }
@@ -276,21 +283,63 @@ fun HojeScreen(abrirCalendario: () -> Unit, abrirRotina: () -> Unit) {
         )
     }
     escolhendoOpcao?.let { item ->
+        val opcoes = item.opcoes.split("|").map { it.trim() }.filter { it.isNotEmpty() }
         AlertDialog(
             onDismissRequest = { escolhendoOpcao = null },
             title = { Text("O que você comeu?") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    item.opcoes.split("|").map { it.trim() }.filter { it.isNotEmpty() }.forEach { opcao ->
+                Column(
+                    Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    if (opcoes.isEmpty()) {
+                        OutlinedButton(
+                            onClick = { marcar(item); escolhendoOpcao = null },
+                            modifier = Modifier.fillMaxWidth().height(56.dp),
+                        ) { Text("Comi o previsto") }
+                    }
+                    opcoes.forEach { opcao ->
                         OutlinedButton(
                             onClick = { marcar(item, opcao); escolhendoOpcao = null },
                             modifier = Modifier.fillMaxWidth().height(56.dp),
                         ) { Text(opcao) }
                     }
+                    OutlinedButton(
+                        onClick = { escrevendoOutro = item; escolhendoOpcao = null },
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                    ) { Text("✏️ Comi outra coisa…") }
+                    OutlinedButton(
+                        onClick = { marcar(item, "Não fiz", pulado = true); escolhendoOpcao = null },
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                    ) { Text("✗ Não fiz esta refeição", color = Vermelho) }
                 }
             },
             confirmButton = {},
             dismissButton = { TextButton(onClick = { escolhendoOpcao = null }) { Text("Cancelar") } },
+        )
+    }
+    escrevendoOutro?.let { item ->
+        var texto by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { escrevendoOutro = null },
+            title = { Text("O que você comeu?") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("${item.titulo} · escreva o que comeu no lugar", color = Cinza)
+                    OutlinedTextField(
+                        texto, { texto = it.take(120) },
+                        placeholder = { Text("Ex.: 2 pães com queijo e café") },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = texto.isNotBlank(), onClick = {
+                    marcar(item, br.com.meushape.data.Feito.OUTRO + texto.trim())
+                    escrevendoOutro = null
+                }) { Text("Salvar") }
+            },
+            dismissButton = { TextButton(onClick = { escrevendoOutro = null }) { Text("Cancelar") } },
         )
     }
     confirmandoLivre?.let { item ->
@@ -342,6 +391,7 @@ private fun ItemLinha(
     onMarcar: () -> Unit,
     onDesmarcar: () -> Unit,
     onLivre: () -> Unit,
+    onOutrasOpcoes: () -> Unit,
 ) {
     val (titulo, descricao) = textoItem(item, atividade)
     val horario = Horario.texto(item.inicioMin) + (item.fimMin?.let { " – " + Horario.texto(it) } ?: "")
@@ -358,11 +408,23 @@ private fun ItemLinha(
                 )
                 Text(titulo, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 if (descricao.isNotBlank()) Text(descricao, style = MaterialTheme.typography.bodyMedium)
-                if (feito != null && feito.opcao.isNotBlank()) Text("✓ ${feito.opcao}", color = Limao)
+                when {
+                    feito == null -> {}
+                    feito.pulado -> Text("✗ Não fiz", color = Vermelho)
+                    feito.opcao.startsWith(br.com.meushape.data.Feito.OUTRO) ->
+                        Text("✓ Comeu: ${feito.opcao.removePrefix(br.com.meushape.data.Feito.OUTRO)}", color = Laranja)
+                    feito.opcao.isNotBlank() -> Text("✓ ${feito.opcao}", color = Limao)
+                }
             }
             Spacer(Modifier.width(8.dp))
             Box {
-                if (feito != null) {
+                if (feito?.pulado == true) {
+                    Button(
+                        onClick = onDesmarcar,
+                        colors = ButtonDefaults.buttonColors(containerColor = Vermelho.copy(alpha = 0.6f)),
+                        modifier = Modifier.size(64.dp),
+                    ) { Text("✗", fontSize = 26.sp) }
+                } else if (feito != null) {
                     Button(
                         onClick = onDesmarcar,
                         colors = ButtonDefaults.buttonColors(containerColor = Limao),
@@ -373,8 +435,13 @@ private fun ItemLinha(
                 }
             }
         }
-        if (feito == null && podeUsarLivre) {
-            TextButton(onClick = onLivre) { Text("Usar como refeição livre") }
+        if (feito == null && item.tipo == TipoItem.REFEICAO) {
+            Row {
+                if (item.opcoes.isBlank()) {
+                    TextButton(onClick = onOutrasOpcoes) { Text("Outra coisa / não fiz") }
+                }
+                if (podeUsarLivre) TextButton(onClick = onLivre) { Text("Refeição livre") }
+            }
         }
     }
 }
