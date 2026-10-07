@@ -40,6 +40,8 @@ data class AppState(
     val weeklyReleaseStartedAt: Long = 0L,
     /** Segundas-feiras (yyyy-MM-dd) das semanas em que a liberação foi usada. */
     val weeklyReleaseUsedWeeks: List<String> = emptyList(),
+    /** De quantas em quantas semanas a liberação pode ser usada (1 = toda semana). */
+    val weeklyReleaseIntervalWeeks: Int = 1,
 ) {
     val hasPassword get() = passwordHash.isNotEmpty()
 }

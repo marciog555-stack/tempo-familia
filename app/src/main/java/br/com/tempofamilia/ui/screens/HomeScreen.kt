@@ -176,15 +176,15 @@ private fun CartaoLiberacaoSemanal(estado: br.com.tempofamilia.data.AppState) {
         }
         disponivel -> InfoCard(
             "Liberação semanal disponível",
-            "15 minutos, uma vez nesta semana. Cada semana sem usar é uma vitória." +
+            "15 minutos, ${if (estado.weeklyReleaseIntervalWeeks <= 1) "uma vez por semana" else "uma vez a cada ${estado.weeklyReleaseIntervalWeeks} semanas"}. Cada semana sem usar é uma vitória." +
                 if (semanas > 0) "\n🏆 $semanas ${if (semanas == 1) "semana" else "semanas seguidas"} sem usar." else "",
             MaterialTheme.colorScheme.secondaryContainer,
         ) {
             OutlinedButton(onClick = { confirmando = true }) { Text("Usar os 15 minutos desta semana") }
         }
         else -> InfoCard(
-            "Liberação desta semana já usada",
-            "Tudo bloqueado até segunda-feira." +
+            "Liberação já usada",
+            "Tudo bloqueado até segunda, ${br.com.tempofamilia.util.LiberacaoSemanal.proximaSegunda(estado).format(java.time.format.DateTimeFormatter.ofPattern("dd/MM"))}." +
                 if (semanas > 0) "\n🏆 $semanas ${if (semanas == 1) "semana" else "semanas seguidas"} sem usar antes desta." else "",
             MaterialTheme.colorScheme.primaryContainer,
         )
@@ -196,7 +196,7 @@ private fun CartaoLiberacaoSemanal(estado: br.com.tempofamilia.data.AppState) {
             title = { Text("Tem certeza?") },
             text = {
                 Text(
-                    "Você só pode usar uma vez por semana, e o tempo conta mesmo se fechar antes.\n\n" +
+                    "Depois de usar, a próxima liberação só vem daqui a ${estado.weeklyReleaseIntervalWeeks.coerceAtLeast(1)} semana(s), e o tempo conta mesmo se fechar antes.\n\n" +
                         "Se a vontade passar, é só cancelar: mais uma semana sem usar conta para a sua meta."
                 )
             },

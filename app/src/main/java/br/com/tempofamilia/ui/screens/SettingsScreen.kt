@@ -13,6 +13,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -92,8 +93,31 @@ fun SettingsScreen() {
                         }
                     })
                 }
+                if (estado.weeklyReleaseEnabled) {
+                    Text("Frequência", fontWeight = FontWeight.SemiBold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf(1, 2, 3, 4).forEach { n ->
+                            FilterChip(
+                                selected = estado.weeklyReleaseIntervalWeeks == n,
+                                onClick = {
+                                    val atual = estado.weeklyReleaseIntervalWeeks
+                                    if (n >= atual) {
+                                        // Espaçar mais é mais rígido: livre.
+                                        Store.update { it.copy(weeklyReleaseIntervalWeeks = n) }
+                                    } else {
+                                        gate.ask("Diminuir o intervalo da liberação para ${if (n == 1) "toda semana" else "a cada $n semanas"}.") {
+                                            Store.update { it.copy(weeklyReleaseIntervalWeeks = n) }
+                                        }
+                                    }
+                                },
+                                label = { Text(if (n == 1) "Toda semana" else "$n sem.") },
+                            )
+                        }
+                    }
+                    Text("Aumentar o intervalo é livre. Diminuir pede a senha.", style = MaterialTheme.typography.bodySmall)
+                }
                 Text(
-                    "Uma vez por semana (segunda a domingo), o bloqueio de palavras e sites fica desligado por " +
+                    "Uma vez a cada período escolhido (semanas de segunda a domingo), o bloqueio de palavras e sites fica desligado por " +
                         "15 minutos e depois volta sozinho. Os limites de apps e as telas protegidas continuam valendo.\n" +
                         "Ativar pede a senha. Desligar é livre, a qualquer momento. Quando estiver pronto, desligue de vez.",
                     style = MaterialTheme.typography.bodySmall,

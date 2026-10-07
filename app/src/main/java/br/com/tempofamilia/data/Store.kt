@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -44,6 +45,7 @@ object Store {
     private val K_SEM_ATIVADA = longPreferencesKey("liberacao_semanal_ativada_em")
     private val K_SEM_INICIO = longPreferencesKey("liberacao_semanal_inicio")
     private val K_SEM_USADAS = stringPreferencesKey("liberacao_semanal_usadas")
+    private val K_SEM_INTERVALO = intPreferencesKey("liberacao_intervalo_semanas")
 
     fun init(context: Context) {
         if (::ds.isInitialized) return
@@ -79,6 +81,7 @@ object Store {
         weeklyReleaseActivatedAt = p[K_SEM_ATIVADA] ?: 0L,
         weeklyReleaseStartedAt = p[K_SEM_INICIO] ?: 0L,
         weeklyReleaseUsedWeeks = parseStrings(p[K_SEM_USADAS]),
+        weeklyReleaseIntervalWeeks = p[K_SEM_INTERVALO] ?: 1,
     )
 
     private fun toPrefs(s: AppState, p: MutablePreferences) {
@@ -108,6 +111,7 @@ object Store {
         p[K_SEM_ATIVADA] = s.weeklyReleaseActivatedAt
         p[K_SEM_INICIO] = s.weeklyReleaseStartedAt
         p[K_SEM_USADAS] = JSONArray(s.weeklyReleaseUsedWeeks).toString()
+        p[K_SEM_INTERVALO] = s.weeklyReleaseIntervalWeeks
     }
 
     private fun parseLimits(json: String?): List<AppLimit> = runCatching {

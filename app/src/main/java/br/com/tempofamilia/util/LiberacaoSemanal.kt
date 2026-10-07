@@ -26,9 +26,16 @@ object LiberacaoSemanal {
 
     fun terminaEm(s: AppState): Long = s.weeklyReleaseStartedAt + DURACAO_MS
 
-    /** Ainda dá para usar a liberação nesta semana? */
+    /** Ainda dá para usar a liberação nesta semana (respeitando o intervalo em semanas)? */
     fun disponivel(s: AppState, hoje: LocalDate = LocalDate.now()): Boolean =
-        s.weeklyReleaseEnabled && segunda(hoje).toString() !in s.weeklyReleaseUsedWeeks
+        s.weeklyReleaseEnabled && !proximaSegunda(s, hoje).isAfter(segunda(hoje))
+
+    /** Segunda-feira da semana em que a próxima liberação fica disponível. */
+    fun proximaSegunda(s: AppState, hoje: LocalDate = LocalDate.now()): LocalDate {
+        val ultima = s.weeklyReleaseUsedWeeks.maxOrNull()?.let { LocalDate.parse(it) } ?: return segunda(hoje)
+        val intervalo = s.weeklyReleaseIntervalWeeks.coerceAtLeast(1).toLong()
+        return ultima.plusWeeks(intervalo)
+    }
 
     /** Começa a liberação agora e marca a semana como usada. */
     fun iniciar(s: AppState, agora: Long = System.currentTimeMillis()): AppState {

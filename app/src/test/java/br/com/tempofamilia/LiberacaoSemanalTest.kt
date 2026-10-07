@@ -46,3 +46,17 @@ class LiberacaoSemanalTest {
         assertEquals(1, LiberacaoSemanal.semanasSemUsar(usada, quarta))
     }
 }
+
+class LiberacaoIntervaloTest {
+    private fun ms(d: LocalDate) = d.atTime(20, 0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+    @Test
+    fun intervaloDeDuasSemanas() {
+        val quarta = LocalDate.of(2026, 10, 7)
+        val s = AppState(weeklyReleaseEnabled = true, weeklyReleaseIntervalWeeks = 2)
+        val usada = LiberacaoSemanal.iniciar(s, ms(quarta))
+        assertFalse(LiberacaoSemanal.disponivel(usada, quarta.plusWeeks(1)))  // semana seguinte: não
+        assertTrue(LiberacaoSemanal.disponivel(usada, quarta.plusWeeks(2)))   // 2 semanas depois: sim
+        assertEquals(LocalDate.of(2026, 10, 19), LiberacaoSemanal.proximaSegunda(usada, quarta))
+    }
+}
