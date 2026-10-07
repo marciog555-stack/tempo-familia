@@ -9,6 +9,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -77,6 +80,9 @@ fun HomeScreen(irParaApps: () -> Unit, irParaAjustes: () -> Unit) {
                 Text(hoje.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyLarge)
             }
         }
+        if (estado.weeklyReleaseEnabled) {
+            item { CartaoLiberacaoSemanal(estado) }
+        }
         if (faltando.isNotEmpty()) {
             item {
                 InfoCard(
@@ -140,5 +146,67 @@ fun HomeScreen(irParaApps: () -> Unit, irParaAjustes: () -> Unit) {
             }
         }
         item { Text(" ") }
+    }
+}
+
+/** Cartão da liberação semanal: usar, acompanhar o tempo e encerrar antes. */
+@Composable
+private fun CartaoLiberacaoSemanal(estado: br.com.tempofamilia.data.AppState) {
+    var agora by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(estado.weeklyReleaseStartedAt) {
+        while (true) { agora = System.currentTimeMillis(); delay(1000) }
+    }
+    var confirmando by remember { mutableStateOf(false) }
+    val emAndamento = br.com.tempofamilia.util.LiberacaoSemanal.emAndamento(estado, agora)
+    val disponivel = br.com.tempofamilia.util.LiberacaoSemanal.disponivel(estado)
+    val semanas = br.com.tempofamilia.util.LiberacaoSemanal.semanasSemUsar(estado)
+
+    when {
+        emAndamento -> {
+            val resta = ((br.com.tempofamilia.util.LiberacaoSemanal.terminaEm(estado) - agora) / 1000).coerceAtLeast(0)
+            InfoCard(
+                "Liberação semanal em andamento",
+                "O bloqueio de sites volta sozinho em %d:%02d.".format(resta / 60, resta % 60),
+                Laranja.copy(alpha = 0.25f),
+            ) {
+                Button(onClick = {
+                    Store.update { br.com.tempofamilia.util.LiberacaoSemanal.encerrar(it) }
+                }) { Text("Encerrar agora e voltar a bloquear") }
+            }
+        }
+        disponivel -> InfoCard(
+            "Liberação semanal disponível",
+            "15 minutos, uma vez nesta semana. Cada semana sem usar é uma vitória." +
+                if (semanas > 0) "\n🏆 $semanas ${if (semanas == 1) "semana" else "semanas seguidas"} sem usar." else "",
+            MaterialTheme.colorScheme.secondaryContainer,
+        ) {
+            OutlinedButton(onClick = { confirmando = true }) { Text("Usar os 15 minutos desta semana") }
+        }
+        else -> InfoCard(
+            "Liberação desta semana já usada",
+            "Tudo bloqueado até segunda-feira." +
+                if (semanas > 0) "\n🏆 $semanas ${if (semanas == 1) "semana" else "semanas seguidas"} sem usar antes desta." else "",
+            MaterialTheme.colorScheme.primaryContainer,
+        )
+    }
+
+    if (confirmando) {
+        AlertDialog(
+            onDismissRequest = { confirmando = false },
+            title = { Text("Tem certeza?") },
+            text = {
+                Text(
+                    "Você só pode usar uma vez por semana, e o tempo conta mesmo se fechar antes.\n\n" +
+                        "Se a vontade passar, é só cancelar: mais uma semana sem usar conta para a sua meta."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmando = false
+                    Store.update { br.com.tempofamilia.util.LiberacaoSemanal.iniciar(it) }
+                }) { Text("Usar agora") }
+            },
+            dismissButton = { TextButton(onClick = { confirmando = false }) { Text("Cancelar, não vou usar") } },
+        )
     }
 }

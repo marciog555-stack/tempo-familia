@@ -34,6 +34,12 @@ data class AppState(
     val settingsGuardEnabled: Boolean = true,
     /** Até quando (epoch ms) as telas de configuração ficam liberadas após a senha. */
     val unlockedUntil: Long = 0L,
+    /** Liberação semanal de 15 min do bloqueio de palavras (ativar exige senha). */
+    val weeklyReleaseEnabled: Boolean = false,
+    val weeklyReleaseActivatedAt: Long = 0L,
+    val weeklyReleaseStartedAt: Long = 0L,
+    /** Segundas-feiras (yyyy-MM-dd) das semanas em que a liberação foi usada. */
+    val weeklyReleaseUsedWeeks: List<String> = emptyList(),
 ) {
     val hasPassword get() = passwordHash.isNotEmpty()
 }

@@ -9,6 +9,7 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import br.com.tempofamilia.data.Store
 import br.com.tempofamilia.util.KeywordMatcher
+import br.com.tempofamilia.util.LiberacaoSemanal
 import br.com.tempofamilia.util.TextNormalizer
 import br.com.tempofamilia.util.Watchlists
 import kotlinx.coroutines.CoroutineScope
@@ -67,7 +68,7 @@ class GuardAccessibilityService : AccessibilityService() {
                     if (pkg in navegadores) verificarConteudo(pkg, forcar = false)
                 }
                 AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED -> {
-                    if (!event.isPassword && s.wordBlockEnabled) {
+                    if (!event.isPassword && s.wordBlockEnabled && !LiberacaoSemanal.emAndamento(s)) {
                         val digitado = event.text.joinToString(" ")
                         KeywordMatcher.find(digitado)?.let { bloquearPalavra(it) }
                     }
@@ -114,7 +115,8 @@ class GuardAccessibilityService : AccessibilityService() {
     }
 
     private fun verificarConteudo(pkg: String, forcar: Boolean) {
-        if (!Store.state.value.wordBlockEnabled) return
+        val st = Store.state.value
+        if (!st.wordBlockEnabled || LiberacaoSemanal.emAndamento(st)) return
         if (!podeLer("nav:$pkg", forcar)) return
         val raiz = rootInActiveWindow ?: return
         if (raiz.packageName?.toString() != pkg) return

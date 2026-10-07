@@ -75,6 +75,32 @@ fun SettingsScreen() {
         Protecao("Bloqueio de palavras e sites", estado.wordBlockEnabled, gate) { v -> { s: AppState -> s.copy(wordBlockEnabled = v) } }
         Protecao("Proteção das configurações", estado.settingsGuardEnabled, gate) { v -> { s: AppState -> s.copy(settingsGuardEnabled = v) } }
 
+        SectionTitle("Liberação semanal de sites")
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Liberar 15 minutos por semana", modifier = Modifier.weight(1f))
+                    Switch(checked = estado.weeklyReleaseEnabled, onCheckedChange = { novo ->
+                        if (novo) {
+                            // Afrouxar a proteção: exige a senha da pessoa de confiança.
+                            gate.ask("Ativar a liberação semanal: uma vez por semana, o bloqueio de sites fica desligado por 15 minutos.") {
+                                Store.update { it.copy(weeklyReleaseEnabled = true, weeklyReleaseActivatedAt = System.currentTimeMillis()) }
+                            }
+                        } else {
+                            // Deixar mais rígido é sempre livre.
+                            Store.update { it.copy(weeklyReleaseEnabled = false, weeklyReleaseStartedAt = 0L) }
+                        }
+                    })
+                }
+                Text(
+                    "Uma vez por semana (segunda a domingo), o bloqueio de palavras e sites fica desligado por " +
+                        "15 minutos e depois volta sozinho. Os limites de apps e as telas protegidas continuam valendo.\n" +
+                        "Ativar pede a senha. Desligar é livre, a qualquer momento. Quando estiver pronto, desligue de vez.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+
         SectionTitle("Liberação temporária")
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

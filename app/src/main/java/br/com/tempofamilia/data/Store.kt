@@ -40,6 +40,10 @@ object Store {
     private val K_WORD_ON = booleanPreferencesKey("palavras_ativas")
     private val K_GUARD_ON = booleanPreferencesKey("protecao_config_ativa")
     private val K_UNLOCK = longPreferencesKey("liberado_ate")
+    private val K_SEM_ON = booleanPreferencesKey("liberacao_semanal_ativa")
+    private val K_SEM_ATIVADA = longPreferencesKey("liberacao_semanal_ativada_em")
+    private val K_SEM_INICIO = longPreferencesKey("liberacao_semanal_inicio")
+    private val K_SEM_USADAS = stringPreferencesKey("liberacao_semanal_usadas")
 
     fun init(context: Context) {
         if (::ds.isInitialized) return
@@ -71,6 +75,10 @@ object Store {
         wordBlockEnabled = p[K_WORD_ON] ?: true,
         settingsGuardEnabled = p[K_GUARD_ON] ?: true,
         unlockedUntil = p[K_UNLOCK] ?: 0L,
+        weeklyReleaseEnabled = p[K_SEM_ON] ?: false,
+        weeklyReleaseActivatedAt = p[K_SEM_ATIVADA] ?: 0L,
+        weeklyReleaseStartedAt = p[K_SEM_INICIO] ?: 0L,
+        weeklyReleaseUsedWeeks = parseStrings(p[K_SEM_USADAS]),
     )
 
     private fun toPrefs(s: AppState, p: MutablePreferences) {
@@ -96,6 +104,10 @@ object Store {
         p[K_WORD_ON] = s.wordBlockEnabled
         p[K_GUARD_ON] = s.settingsGuardEnabled
         p[K_UNLOCK] = s.unlockedUntil
+        p[K_SEM_ON] = s.weeklyReleaseEnabled
+        p[K_SEM_ATIVADA] = s.weeklyReleaseActivatedAt
+        p[K_SEM_INICIO] = s.weeklyReleaseStartedAt
+        p[K_SEM_USADAS] = JSONArray(s.weeklyReleaseUsedWeeks).toString()
     }
 
     private fun parseLimits(json: String?): List<AppLimit> = runCatching {
