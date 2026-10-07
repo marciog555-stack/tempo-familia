@@ -10,6 +10,7 @@ import br.com.meushape.logic.TipoDia
 import br.com.meushape.logic.TrocaDia
 import br.com.meushape.notify.Avisos
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -87,11 +88,33 @@ class Repo(private val ctx: Context) {
         db.treinos().encerrarSessao(sessao.id, System.currentTimeMillis())
         val dia = LocalDate.parse(sessao.data)
         val escala = escala()
-        val item = plano(escala.tipo(dia)).firstOrNull {
+        val item = planoDoDia(dia, escala).firstOrNull {
             it.tipo == TipoItem.TREINO || it.tipo == TipoItem.TREINO_FOLGA
         } ?: return
         val ja = db.feitos().listarPeriodo(sessao.data, sessao.data).any { it.itemId == item.id }
         if (!ja) marcarFeito(dia, item.id, db.treinos().treino(sessao.treinoId)?.let { "Treino ${it.nome}" } ?: "")
+    }
+
+    /** Cria os treinos "Adaptação A" e "Adaptação B" prontos. */
+    suspend fun criarTreinosAdaptacao() {
+        val dao = db.treinos()
+        val existentes = dao.observarExercicios().first().associateBy { it.nome }.toMutableMap()
+        val treinos = dao.observarTreinos().first()
+        listOf("Adaptação A" to TreinoAdaptacao.A, "Adaptação B" to TreinoAdaptacao.B).forEachIndexed { idx, (nome, linhas) ->
+            if (treinos.any { it.nome == nome }) return@forEachIndexed
+            val treinoId = dao.salvarTreino(
+                Treino(nome = nome, observacao = "Fase de adaptação · corpo inteiro · carga leve", ordem = idx - 10)
+            )
+            linhas.forEachIndexed { ordem, l ->
+                val exId = existentes[l.exercicio]?.id ?: dao.salvarExercicio(
+                    Exercicio(nome = l.exercicio, grupo = l.grupo, personalizado = true)
+                ).also { existentes[l.exercicio] = Exercicio(it, l.exercicio, l.grupo, true) }
+                dao.salvarItem(
+                    TreinoExercicio(treinoId = treinoId, exercicioId = exId, ordem = ordem,
+                        series = l.series, repeticoes = l.reps, descansoSeg = l.descanso)
+                )
+            }
+        }
     }
 
     suspend fun descartarTreino(sessaoId: Long) {
@@ -109,7 +132,7 @@ class Repo(private val ctx: Context) {
         val lista = escala.periodosDePlantao(de, ate).map { Periodo(it.first, it.second) }.toMutableList()
         var dia = Escala.diaLogico(de).minusDays(1)
         while (!dia.isAfter(ate.toLocalDate())) {
-            plano(escala.tipo(dia)).filter { it.tipo == TipoItem.TREINO || it.tipo == TipoItem.TREINO_FOLGA }.forEach {
+            planoDoDia(dia, escala).filter { it.tipo == TipoItem.TREINO || it.tipo == TipoItem.TREINO_FOLGA }.forEach {
                 lista += Periodo(Horario.momento(dia, it.inicioMin), Horario.momento(dia, it.fimMin ?: (it.inicioMin + 60)))
             }
             dia = dia.plusDays(1)
@@ -244,6 +267,10 @@ class Repo(private val ctx: Context) {
     fun observarPlano(tipo: TipoDia) = db.plano().observar(chavePlano(tipo))
     suspend fun plano(tipo: TipoDia) = db.plano().listar(chavePlano(tipo))
 
+    /** Rotina de um dia já com os horários alterados só para aquele dia, em ordem de horário. */
+    suspend fun planoDoDia(dia: LocalDate, escala: Escala): List<ItemPlano> =
+        aplicarHorarios(plano(escala.tipo(dia)), db.horarioDia().listarDia(dia.toString()))
+
     // ---- Refeição livre: 1 por semana (segunda a domingo) ----
 
     fun observarFeitosDaSemana(dia: LocalDate): Flow<List<Feito>> {
@@ -255,6 +282,14 @@ class Repo(private val ctx: Context) {
         /** Período de marcação: semana (segunda) para a lista semanal, mês para a mensal. */
         fun periodo(lista: String, dia: LocalDate): String =
             if (lista == Lista.SEMANAL) inicioSemana(dia).toString() else dia.toString().substring(0, 7)
+
+        /** Aplica os horários alterados do dia sobre os itens da rotina. */
+        fun aplicarHorarios(itens: List<ItemPlano>, ajustes: List<HorarioDia>): List<ItemPlano> {
+            val porItem = ajustes.associateBy { it.itemId }
+            return itens.map { i ->
+                porItem[i.id]?.let { a -> i.copy(inicioMin = a.inicioMin, fimMin = a.fimMin) } ?: i
+            }.sortedBy { it.inicioMin }
+        }
 
         fun chavePlano(tipo: TipoDia) = if (tipo.usaCardapioFolga) "FOLGA" else "PLANTAO"
         fun inicioSemana(dia: LocalDate): LocalDate =

@@ -241,3 +241,14 @@ data class Foto(
     val angulo: String,
     val arquivo: String,
 )
+
+// ---------------- Horário diferente só num dia ----------------
+
+/** Muda o horário de um item da rotina só naquele dia (a rotina normal não muda). */
+@Entity(tableName = "horario_dia", primaryKeys = ["data", "itemId"])
+data class HorarioDia(
+    val data: String,
+    val itemId: Long,
+    val inicioMin: Int,
+    val fimMin: Int? = null,
+)

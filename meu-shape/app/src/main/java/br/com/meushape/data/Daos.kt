@@ -304,3 +304,18 @@ interface ProgressoDao {
     @Delete
     suspend fun apagarFoto(f: Foto)
 }
+
+@Dao
+interface HorarioDiaDao {
+    @Query("SELECT * FROM horario_dia WHERE data = :data")
+    fun observarDia(data: String): Flow<List<HorarioDia>>
+
+    @Query("SELECT * FROM horario_dia WHERE data = :data")
+    suspend fun listarDia(data: String): List<HorarioDia>
+
+    @Upsert
+    suspend fun salvar(h: HorarioDia)
+
+    @Query("DELETE FROM horario_dia WHERE data = :data AND itemId = :itemId")
+    suspend fun apagar(data: String, itemId: Long)
+}

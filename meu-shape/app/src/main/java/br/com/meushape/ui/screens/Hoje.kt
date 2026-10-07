@@ -2,6 +2,7 @@ package br.com.meushape.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -108,9 +109,13 @@ fun HojeScreen(abrirCalendario: () -> Unit, abrirRotina: () -> Unit) {
     val escala by remember { repo.observarEscala() }.collectAsState(initial = null)
     val info = escala?.info(dia)
     val tipo = info?.tipo ?: TipoDia.FOLGA
-    val plano by remember(tipo, escala == null) {
+    val planoBase by remember(tipo, escala == null) {
         if (escala == null) flowOf(emptyList()) else repo.observarPlano(tipo)
     }.collectAsState(initial = emptyList())
+    val ajustesHoje by remember(dia) { repo.db.horarioDia().observarDia(dia.toString()) }.collectAsState(initial = emptyList())
+    val plano = Repo.aplicarHorarios(planoBase, ajustesHoje)
+    val alterados = ajustesHoje.map { it.itemId }.toSet()
+    var mudandoHorario by remember { mutableStateOf<ItemPlano?>(null) }
     val feitosSemana by remember(dia) { repo.observarFeitosDaSemana(dia) }.collectAsState(initial = emptyList())
     val agua by remember(dia) { repo.db.agua().observar(dia.toString()) }.collectAsState(initial = null)
     val estoque by remember { repo.db.marmitas().observarEstoque() }.collectAsState(initial = emptyList())
@@ -236,6 +241,8 @@ fun HojeScreen(abrirCalendario: () -> Unit, abrirRotina: () -> Unit) {
                 destaque = item.id == proximoId,
                 atrasado = item.id !in feitosHoje && Horario.momento(dia, item.fimMin ?: item.inicioMin).isBefore(agora),
                 podeUsarLivre = livreUsada == null && item.tipo == TipoItem.REFEICAO,
+                alteradoHoje = item.id in alterados,
+                onHorario = { mudandoHorario = item },
                 onMarcar = {
                     if (item.opcoes.isNotBlank()) escolhendoOpcao = item else marcar(item)
                 },
@@ -246,6 +253,28 @@ fun HojeScreen(abrirCalendario: () -> Unit, abrirRotina: () -> Unit) {
         item { Spacer(Modifier.height(24.dp)) }
     }
 
+    mudandoHorario?.let { item ->
+        HorarioSoHojeDialog(
+            item = item,
+            original = planoBase.firstOrNull { it.id == item.id } ?: item,
+            alterado = item.id in alterados,
+            onDismiss = { mudandoHorario = null },
+            onSalvar = { ini, fim ->
+                mudandoHorario = null
+                scope.launch {
+                    repo.db.horarioDia().salvar(br.com.meushape.data.HorarioDia(dia.toString(), item.id, ini, fim))
+                    br.com.meushape.notify.Alarmes.agendarProximo(ctx)
+                }
+            },
+            onRestaurar = {
+                mudandoHorario = null
+                scope.launch {
+                    repo.db.horarioDia().apagar(dia.toString(), item.id)
+                    br.com.meushape.notify.Alarmes.agendarProximo(ctx)
+                }
+            },
+        )
+    }
     escolhendoOpcao?.let { item ->
         AlertDialog(
             onDismissRequest = { escolhendoOpcao = null },
@@ -308,6 +337,8 @@ private fun ItemLinha(
     destaque: Boolean,
     atrasado: Boolean,
     podeUsarLivre: Boolean,
+    alteradoHoje: Boolean,
+    onHorario: () -> Unit,
     onMarcar: () -> Unit,
     onDesmarcar: () -> Unit,
     onLivre: () -> Unit,
@@ -318,10 +349,12 @@ private fun ItemLinha(
     CartaoApp(modifier = borda) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
+                // Tocar no horário muda só para hoje.
                 Text(
-                    horario,
-                    color = when { feito != null -> Limao; atrasado -> Laranja; else -> Cinza },
+                    horario + (if (alteradoHoje) "  (só hoje) ✎" else "  ✎"),
+                    color = when { feito != null -> Limao; alteradoHoje -> Azul; atrasado -> Laranja; else -> Cinza },
                     fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.clickable(onClick = onHorario).padding(vertical = 4.dp),
                 )
                 Text(titulo, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 if (descricao.isNotBlank()) Text(descricao, style = MaterialTheme.typography.bodyMedium)
@@ -342,6 +375,56 @@ private fun ItemLinha(
         }
         if (feito == null && podeUsarLivre) {
             TextButton(onClick = onLivre) { Text("Usar como refeição livre") }
+        }
+    }
+}
+
+/** Muda o horário de um item só no dia de hoje. */
+@Composable
+private fun HorarioSoHojeDialog(
+    item: ItemPlano,
+    original: ItemPlano,
+    alterado: Boolean,
+    onDismiss: () -> Unit,
+    onSalvar: (Int, Int?) -> Unit,
+    onRestaurar: () -> Unit,
+) {
+    var ini by remember { mutableStateOf(item.inicioMin) }
+    var fim by remember { mutableStateOf(item.fimMin) }
+    var escolhendo by remember { mutableStateOf<String?>(null) }
+    // Mantém a mesma duração ao mudar o início (ex.: treino de 1 hora).
+    val duracao = original.fimMin?.let { it - original.inicioMin }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Horário de hoje: ${item.titulo}") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Muda só hoje. A rotina dos outros dias continua igual.", color = Cinza)
+                Text("Horário normal: ${Horario.texto(original.inicioMin)}" +
+                    (original.fimMin?.let { " – ${Horario.texto(it)}" } ?: ""), color = Cinza)
+                OutlinedButton(onClick = { escolhendo = "ini" }, modifier = Modifier.fillMaxWidth().height(56.dp)) {
+                    Text("Início: ${Horario.texto(ini)}", fontSize = 18.sp)
+                }
+                if (fim != null) {
+                    OutlinedButton(onClick = { escolhendo = "fim" }, modifier = Modifier.fillMaxWidth().height(56.dp)) {
+                        Text("Fim: ${Horario.texto(fim!!)}", fontSize = 18.sp)
+                    }
+                }
+                if (alterado) TextButton(onClick = onRestaurar) { Text("Voltar ao horário normal") }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onSalvar(ini, fim) }) { Text("Salvar para hoje") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
+    )
+    escolhendo?.let { qual ->
+        val atual = Math.floorMod(if (qual == "ini") ini else (fim ?: ini), 1440)
+        br.com.meushape.ui.EscolherHora(atual / 60, atual % 60, onDismiss = { escolhendo = null }) { h, m ->
+            val v = Horario.deTexto(h, m)
+            if (qual == "ini") {
+                ini = v
+                if (duracao != null) fim = v + duracao
+            } else fim = if (v <= ini) v + 1440 else v
+            escolhendo = null
         }
     }
 }

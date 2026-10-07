@@ -44,8 +44,7 @@ object Alarmes {
         val lista = mutableListOf<Agendado>()
         for (i in 0 until dias) {
             val dia = hoje.plusDays(i.toLong())
-            val tipo = escala.tipo(dia)
-            repo.plano(tipo).forEach { item ->
+            repo.planoDoDia(dia, escala).forEach { item ->
                 lista += Agendado(dia, item, Horario.momento(dia, item.inicioMin))
             }
         }

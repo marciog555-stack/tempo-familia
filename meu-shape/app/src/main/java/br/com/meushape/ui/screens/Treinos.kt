@@ -120,6 +120,8 @@ private fun ListaTreinosScreen(
     val itens by remember { repo.db.treinos().observarTodosItens() }.collectAsState(initial = emptyList())
     val exercicios by remember { repo.db.treinos().observarExercicios() }.collectAsState(initial = emptyList())
     val nomes = exercicios.associate { it.id to it.nome }
+    var explicandoAdaptacao by remember { mutableStateOf(false) }
+    val temAdaptacao = treinos.any { it.nome.startsWith("Adaptação") }
 
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -128,6 +130,9 @@ private fun ListaTreinosScreen(
         item {
             Spacer(Modifier.height(16.dp))
             Text("Treinos", fontSize = 30.sp, fontWeight = FontWeight.Bold)
+            if (temAdaptacao) {
+                TextButton(onClick = { explicandoAdaptacao = true }) { Text("Como fazer a adaptação?") }
+            }
         }
         if (sessaoAberta != null) {
             item {
@@ -141,10 +146,22 @@ private fun ListaTreinosScreen(
                 }
             }
         }
+        if (!temAdaptacao) {
+            item {
+                CartaoApp(cor = Limao.copy(alpha = 0.12f)) {
+                    Text("Ainda não tem um treino montado?", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Text("Comece pelo treino de adaptação pronto: corpo inteiro, em duas partes (A e B) para alternar.")
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = { explicandoAdaptacao = true }, modifier = Modifier.fillMaxWidth().height(56.dp)) {
+                        Text("Usar treino de adaptação")
+                    }
+                }
+            }
+        }
         if (treinos.isEmpty()) {
             item {
                 Text(
-                    "Monte seus treinos (A, B, C...) com os exercícios que o instrutor passar.",
+                    "Ou monte seus treinos (A, B, C...) com os exercícios que o instrutor passar.",
                     color = Cinza,
                 )
             }
@@ -152,7 +169,7 @@ private fun ListaTreinosScreen(
         items(treinos, key = { it.id }) { t ->
             val doTreino = itens.filter { it.treinoId == t.id }
             CartaoApp {
-                Text("Treino ${t.nome}", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                Text(if (t.nome.startsWith("Adaptação")) t.nome else "Treino ${t.nome}", fontSize = 22.sp, fontWeight = FontWeight.Bold)
                 if (t.observacao.isNotBlank()) Text(t.observacao, color = Cinza)
                 Text(
                     if (doTreino.isEmpty()) "Nenhum exercício"
@@ -187,6 +204,38 @@ private fun ListaTreinosScreen(
             Spacer(Modifier.height(24.dp))
         }
     }
+
+    if (explicandoAdaptacao) {
+        AdaptacaoDialog(
+            jaCriado = temAdaptacao,
+            onDismiss = { explicandoAdaptacao = false },
+            onCriar = { explicandoAdaptacao = false; scope.launch { repo.criarTreinosAdaptacao() } },
+        )
+    }
+}
+
+@Composable
+private fun AdaptacaoDialog(jaCriado: Boolean, onDismiss: () -> Unit, onCriar: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Treino de adaptação") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text(br.com.meushape.data.TreinoAdaptacao.EXPLICACAO)
+                Spacer(Modifier.height(10.dp))
+                Text("Adaptação A", fontWeight = FontWeight.Bold)
+                br.com.meushape.data.TreinoAdaptacao.A.forEach { Text("• ${it.exercicio} — ${it.series}×${it.reps}", color = Cinza) }
+                Spacer(Modifier.height(6.dp))
+                Text("Adaptação B", fontWeight = FontWeight.Bold)
+                br.com.meushape.data.TreinoAdaptacao.B.forEach { Text("• ${it.exercicio} — ${it.series}×${it.reps}", color = Cinza) }
+            }
+        },
+        confirmButton = {
+            if (!jaCriado) TextButton(onClick = onCriar) { Text("Criar treinos A e B") }
+            else TextButton(onClick = onDismiss) { Text("OK") }
+        },
+        dismissButton = { if (!jaCriado) TextButton(onClick = onDismiss) { Text("Cancelar") } },
+    )
 }
 
 // ---------------- Montar treino ----------------
