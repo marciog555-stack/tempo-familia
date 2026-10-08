@@ -24,6 +24,11 @@ class Repo(private val ctx: Context) {
 
     /** Cria o cardápio padrão e o perfil inicial na primeira vez. */
     suspend fun prepararPrimeiraVez() {
+        // Instalação que já tinha dados (antes da configuração inicial existir) não passa por ela.
+        if (db.config().ler("configuracao_inicial") == null) {
+            val jaUsava = db.plano().contar() > 0
+            db.config().salvar(Config("configuracao_inicial", if (jaUsava) "feita" else "pendente"))
+        }
         if (db.plano().contar() == 0) {
             db.plano().inserir(PlanoPadrao.plantao() + PlanoPadrao.folga())
         }
@@ -265,11 +270,18 @@ class Repo(private val ctx: Context) {
     fun observarEscala(): Flow<Escala> =
         combine(db.escala().observar(), db.config().observar()) { trocas, cfg ->
             val m = cfg.associate { it.chave to it.valor }
-            escalaDe(trocas, m["escala_modo"], m["escala_referencia"])
+            escalaDe(trocas, m["escala_modo"], m["escala_referencia"], m["plantao_inicio"], m["plantao_fim"])
         }
 
-    suspend fun escala(): Escala =
-        escalaDe(db.escala().listar(), db.config().ler("escala_modo"), db.config().ler("escala_referencia"))
+    suspend fun escala(): Escala = escalaDe(
+        db.escala().listar(), db.config().ler("escala_modo"), db.config().ler("escala_referencia"),
+        db.config().ler("plantao_inicio"), db.config().ler("plantao_fim"),
+    )
+
+    suspend fun definirHorarioPlantao(inicio: java.time.LocalTime, fim: java.time.LocalTime) {
+        db.config().salvar(Config("plantao_inicio", inicio.toString()))
+        db.config().salvar(Config("plantao_fim", fim.toString()))
+    }
 
     /** Liga/desliga a escala 12x36 e define o dia de plantão de referência. */
     suspend fun configurarEscala(semEscala: Boolean, referencia: LocalDate) {
@@ -277,9 +289,13 @@ class Repo(private val ctx: Context) {
         db.config().salvar(Config("escala_referencia", referencia.toString()))
     }
 
-    private fun escalaDe(lista: List<TrocaDiaEntity>, modo: String?, referencia: String?) = Escala(
+    private fun escalaDe(
+        lista: List<TrocaDiaEntity>, modo: String?, referencia: String?, inicio: String?, fim: String?,
+    ) = Escala(
         referenciaPlantao = referencia?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: Escala.REFERENCIA_PLANTAO,
         semEscala = modo == "SEM_ESCALA",
+        inicioPlantao = inicio?.let { runCatching { java.time.LocalTime.parse(it) }.getOrNull() } ?: Escala.INICIO_PLANTAO,
+        fimPlantao = fim?.let { runCatching { java.time.LocalTime.parse(it) }.getOrNull() } ?: Escala.FIM_PLANTAO,
         trocas = lista.associate {
             LocalDate.parse(it.data) to TrocaDia(
                 tipo = it.tipo?.let { t -> TipoDia.valueOf(t) },

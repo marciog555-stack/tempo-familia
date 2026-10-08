@@ -169,7 +169,7 @@ fun HojeScreen(abrirCalendario: () -> Unit, abrirRotina: () -> Unit) {
                     }
                     Text(
                         when {
-                            info.tipo == TipoDia.PLANTAO -> "Plantão das 17:40 às 05:40"
+                            info.tipo == TipoDia.PLANTAO -> "Plantão das ${escala?.horarioPlantaoTexto ?: ""}"
                             info.atividade == AtividadeFolga.TREINO -> "Hoje é dia de treino de manhã"
                             else -> "Hoje é dia de caminhada de manhã"
                         },

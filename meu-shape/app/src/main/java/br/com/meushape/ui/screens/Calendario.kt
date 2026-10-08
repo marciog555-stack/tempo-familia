@@ -69,9 +69,11 @@ fun CalendarioScreen(onVoltar: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         TextButton(onClick = onVoltar) { Text("← Voltar") }
-        CartaoModoEscala(escala, onSalvar = { sem, ref ->
-            scope.launch { repo.configurarEscala(sem, ref); Alarmes.agendarProximo(ctx) }
-        })
+        CartaoModoEscala(
+            escala,
+            onSalvar = { sem, ref -> scope.launch { repo.configurarEscala(sem, ref); Alarmes.agendarProximo(ctx) } },
+            onHorario = { ini, fim -> scope.launch { repo.definirHorarioPlantao(ini, fim) } },
+        )
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedButton(onClick = { mes = mes.minusMonths(1) }) { Text("‹") }
             Text(
@@ -190,8 +192,13 @@ fun CalendarioScreen(onVoltar: () -> Unit) {
 
 /** Escolhe entre escala 12x36 e "sem escala", e o dia de plantão de referência. */
 @Composable
-private fun CartaoModoEscala(escala: Escala, onSalvar: (Boolean, LocalDate) -> Unit) {
+private fun CartaoModoEscala(
+    escala: Escala,
+    onSalvar: (Boolean, LocalDate) -> Unit,
+    onHorario: (java.time.LocalTime, java.time.LocalTime) -> Unit,
+) {
     var escolhendoData by remember { mutableStateOf(false) }
+    var escolhendoHora by remember { mutableStateOf<String?>(null) }
     br.com.meushape.ui.CartaoApp {
         Text("Minha escala", fontWeight = FontWeight.Bold, fontSize = 18.sp)
         Spacer(Modifier.height(6.dp))
@@ -216,6 +223,19 @@ private fun CartaoModoEscala(escala: Escala, onSalvar: (Boolean, LocalDate) -> U
         } else {
             Text("Plantão de referência: ${escala.referenciaPlantao.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}", color = Cinza)
             TextButton(onClick = { escolhendoData = true }) { Text("Mudar o dia do plantão") }
+            Text("Horário do plantão: ${escala.horarioPlantaoTexto}", color = Cinza)
+            Row {
+                TextButton(onClick = { escolhendoHora = "ini" }) { Text("Mudar início") }
+                TextButton(onClick = { escolhendoHora = "fim" }) { Text("Mudar fim") }
+            }
+        }
+    }
+    escolhendoHora?.let { qual ->
+        val atual = if (qual == "ini") escala.inicioPlantao else escala.fimPlantao
+        br.com.meushape.ui.EscolherHora(atual.hour, atual.minute, onDismiss = { escolhendoHora = null }) { h, m ->
+            val t = java.time.LocalTime.of(h, m)
+            if (qual == "ini") onHorario(t, escala.fimPlantao) else onHorario(escala.inicioPlantao, t)
+            escolhendoHora = null
         }
     }
     if (escolhendoData) {

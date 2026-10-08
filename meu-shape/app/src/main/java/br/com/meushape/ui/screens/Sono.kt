@@ -196,7 +196,7 @@ fun SonoAba() {
                     }, modifier = Modifier.size(52.dp)) { Text("+") }
                 }
                 Text(
-                    "Plantão (17:40–05:40) e horários de treino nunca contam como sono.",
+                    "O horário do plantão e os horários de treino nunca contam como sono.",
                     color = Cinza, style = MaterialTheme.typography.bodySmall,
                 )
             }

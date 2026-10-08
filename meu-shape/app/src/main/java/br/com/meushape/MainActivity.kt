@@ -24,6 +24,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -49,7 +50,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         MonitorService.iniciar(this)
-        setContent { TemaMeuShape { Principal() } }
+        setContent { TemaMeuShape { Raiz() } }
     }
 }
 
@@ -62,6 +63,21 @@ private val ABAS = listOf(
     Aba("Sono", Icons.Filled.DateRange),
     Aba("Progresso", Icons.Filled.Favorite),
 )
+
+/** Mostra a configuração inicial em instalações novas; senão, o app normal. */
+@Composable
+private fun Raiz() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val estado by androidx.compose.runtime.remember {
+        br.com.meushape.data.Repo.get(ctx).db.config().observar()
+    }.collectAsState(initial = null)
+    val cfg = estado ?: return
+    when (cfg.firstOrNull { it.chave == "configuracao_inicial" }?.valor) {
+        null -> Box(Modifier.fillMaxSize())
+        "pendente" -> br.com.meushape.ui.screens.ConfiguracaoInicial()
+        else -> Principal()
+    }
+}
 
 @Composable
 private fun Principal() {

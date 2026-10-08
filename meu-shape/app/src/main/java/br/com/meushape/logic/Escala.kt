@@ -30,7 +30,15 @@ class Escala(
     private val trocas: Map<LocalDate, TrocaDia> = emptyMap(),
     /** Sem escala (ex.: desempregado, férias longas): todo dia segue a rotina de folga. */
     val semEscala: Boolean = false,
+    /** Horário do plantão. Se o fim for antes do início, termina no dia seguinte. */
+    val inicioPlantao: LocalTime = INICIO_PLANTAO,
+    val fimPlantao: LocalTime = FIM_PLANTAO,
 ) {
+    /** Texto "17:40 às 05:40". */
+    val horarioPlantaoTexto: String get() = "%02d:%02d às %02d:%02d".format(
+        inicioPlantao.hour, inicioPlantao.minute, fimPlantao.hour, fimPlantao.minute,
+    )
+
     /** Tipo pelo cálculo automático (sem trocas). */
     fun tipoAutomatico(data: LocalDate): TipoDia {
         if (semEscala) return TipoDia.FOLGA
@@ -67,14 +75,14 @@ class Escala(
 
     fun info(data: LocalDate) = InfoDia(data, tipo(data), atividade(data), trocas.containsKey(data))
 
-    /** O plantão de um dia vai das 17:40 desse dia até 05:40 do dia seguinte. */
+    /** O plantão de um dia vai do início (nesse dia) até o fim (no mesmo dia ou no seguinte). */
     fun periodosDePlantao(de: LocalDateTime, ate: LocalDateTime): List<Pair<LocalDateTime, LocalDateTime>> {
         val lista = mutableListOf<Pair<LocalDateTime, LocalDateTime>>()
         var d = de.toLocalDate().minusDays(1)
         while (!d.isAfter(ate.toLocalDate())) {
             if (tipo(d) == TipoDia.PLANTAO) {
-                val ini = d.atTime(INICIO_PLANTAO)
-                val fim = d.plusDays(1).atTime(FIM_PLANTAO)
+                val ini = d.atTime(inicioPlantao)
+                val fim = if (fimPlantao.isAfter(inicioPlantao)) d.atTime(fimPlantao) else d.plusDays(1).atTime(fimPlantao)
                 if (fim.isAfter(de) && ini.isBefore(ate)) lista += ini to fim
             }
             d = d.plusDays(1)
