@@ -158,7 +158,8 @@ fun HojeScreen(abrirCalendario: () -> Unit, abrirRotina: () -> Unit) {
                 if (info != null) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            info.tipo.nome, fontSize = 34.sp, fontWeight = FontWeight.Bold,
+                            if (escala?.semEscala == true && info.tipo == TipoDia.FOLGA) "Dia livre" else info.tipo.nome,
+                            fontSize = 34.sp, fontWeight = FontWeight.Bold,
                             color = corDoTipo(info.tipo),
                         )
                         if (info.trocado) Text("  (trocado)", color = Cinza)

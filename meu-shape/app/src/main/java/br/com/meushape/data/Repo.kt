@@ -10,6 +10,7 @@ import br.com.meushape.logic.TipoDia
 import br.com.meushape.logic.TrocaDia
 import br.com.meushape.notify.Avisos
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
@@ -261,11 +262,24 @@ class Repo(private val ctx: Context) {
 
     // ---- Escala ----
 
-    fun observarEscala(): Flow<Escala> = db.escala().observar().map { escalaDe(it) }
+    fun observarEscala(): Flow<Escala> =
+        combine(db.escala().observar(), db.config().observar()) { trocas, cfg ->
+            val m = cfg.associate { it.chave to it.valor }
+            escalaDe(trocas, m["escala_modo"], m["escala_referencia"])
+        }
 
-    suspend fun escala(): Escala = escalaDe(db.escala().listar())
+    suspend fun escala(): Escala =
+        escalaDe(db.escala().listar(), db.config().ler("escala_modo"), db.config().ler("escala_referencia"))
 
-    private fun escalaDe(lista: List<TrocaDiaEntity>) = Escala(
+    /** Liga/desliga a escala 12x36 e define o dia de plantão de referência. */
+    suspend fun configurarEscala(semEscala: Boolean, referencia: LocalDate) {
+        db.config().salvar(Config("escala_modo", if (semEscala) "SEM_ESCALA" else "12X36"))
+        db.config().salvar(Config("escala_referencia", referencia.toString()))
+    }
+
+    private fun escalaDe(lista: List<TrocaDiaEntity>, modo: String?, referencia: String?) = Escala(
+        referenciaPlantao = referencia?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: Escala.REFERENCIA_PLANTAO,
+        semEscala = modo == "SEM_ESCALA",
         trocas = lista.associate {
             LocalDate.parse(it.data) to TrocaDia(
                 tipo = it.tipo?.let { t -> TipoDia.valueOf(t) },

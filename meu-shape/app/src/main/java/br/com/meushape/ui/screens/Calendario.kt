@@ -69,6 +69,9 @@ fun CalendarioScreen(onVoltar: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         TextButton(onClick = onVoltar) { Text("← Voltar") }
+        CartaoModoEscala(escala, onSalvar = { sem, ref ->
+            scope.launch { repo.configurarEscala(sem, ref); Alarmes.agendarProximo(ctx) }
+        })
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedButton(onClick = { mes = mes.minusMonths(1) }) { Text("‹") }
             Text(
@@ -182,5 +185,63 @@ fun CalendarioScreen(onVoltar: () -> Unit) {
             },
             dismissButton = { TextButton(onClick = { editando = null }) { Text("Cancelar") } },
         )
+    }
+}
+
+/** Escolhe entre escala 12x36 e "sem escala", e o dia de plantão de referência. */
+@Composable
+private fun CartaoModoEscala(escala: Escala, onSalvar: (Boolean, LocalDate) -> Unit) {
+    var escolhendoData by remember { mutableStateOf(false) }
+    br.com.meushape.ui.CartaoApp {
+        Text("Minha escala", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        Spacer(Modifier.height(6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            FilterChip(
+                selected = !escala.semEscala,
+                onClick = { if (escala.semEscala) escolhendoData = true },
+                label = { Text("Plantão 12x36") },
+            )
+            FilterChip(
+                selected = escala.semEscala,
+                onClick = { if (!escala.semEscala) onSalvar(true, escala.referenciaPlantao) },
+                label = { Text("Sem escala") },
+            )
+        }
+        if (escala.semEscala) {
+            Text(
+                "Todos os dias seguem a rotina de folga (treino e caminhada alternam). " +
+                    "Ajuste os horários em Editar rotina → Folga.",
+                color = Cinza,
+            )
+        } else {
+            Text("Plantão de referência: ${escala.referenciaPlantao.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}", color = Cinza)
+            TextButton(onClick = { escolhendoData = true }) { Text("Mudar o dia do plantão") }
+        }
+    }
+    if (escolhendoData) {
+        EscolherDataDialog(
+            titulo = "Escolha um dia de PLANTÃO da escala",
+            inicial = if (escala.semEscala) LocalDate.now() else escala.referenciaPlantao,
+            onDismiss = { escolhendoData = false },
+            onOk = { escolhendoData = false; onSalvar(false, it) },
+        )
+    }
+}
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun EscolherDataDialog(titulo: String, inicial: LocalDate, onDismiss: () -> Unit, onOk: (LocalDate) -> Unit) {
+    val utc = inicial.atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli()
+    val estado = androidx.compose.material3.rememberDatePickerState(initialSelectedDateMillis = utc)
+    androidx.compose.material3.DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = {
+                onOk(java.time.Instant.ofEpochMilli(estado.selectedDateMillis ?: utc).atZone(java.time.ZoneOffset.UTC).toLocalDate())
+            }) { Text("OK") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
+    ) {
+        androidx.compose.material3.DatePicker(state = estado, title = { Text(titulo, Modifier.padding(16.dp)) })
     }
 }

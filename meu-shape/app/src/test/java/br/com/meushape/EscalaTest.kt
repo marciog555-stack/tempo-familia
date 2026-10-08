@@ -82,3 +82,23 @@ class EscalaTest {
         assertEquals(LocalDateTime.of(2026, 10, 8, 1, 30), Horario.momento(d(7), 1530))
     }
 }
+
+class SemEscalaTest {
+    private fun d(dia: Int, mes: Int = 10) = java.time.LocalDate.of(2026, mes, dia)
+
+    @org.junit.Test
+    fun semEscalaTodoDiaEhFolgaEAtividadeAlternaTodoDia() {
+        val e = Escala(semEscala = true)
+        (8..20).forEach { org.junit.Assert.assertEquals(TipoDia.FOLGA, e.tipo(d(it))) }
+        org.junit.Assert.assertNotEquals(e.atividade(d(10)), e.atividade(d(11)))
+        org.junit.Assert.assertTrue(e.periodosDePlantao(d(8).atStartOfDay(), d(20).atStartOfDay()).isEmpty())
+    }
+
+    @org.junit.Test
+    fun novaReferenciaDePlantao() {
+        val e = Escala(referenciaPlantao = d(20, 11))
+        org.junit.Assert.assertEquals(TipoDia.PLANTAO, e.tipo(d(20, 11)))
+        org.junit.Assert.assertEquals(TipoDia.FOLGA, e.tipo(d(21, 11)))
+        org.junit.Assert.assertEquals(TipoDia.PLANTAO, e.tipo(d(22, 11)))
+    }
+}

@@ -26,11 +26,14 @@ data class InfoDia(val data: LocalDate, val tipo: TipoDia, val atividade: Ativid
  * As trocas manuais valem por cima do cálculo automático.
  */
 class Escala(
-    private val referenciaPlantao: LocalDate = REFERENCIA_PLANTAO,
+    val referenciaPlantao: LocalDate = REFERENCIA_PLANTAO,
     private val trocas: Map<LocalDate, TrocaDia> = emptyMap(),
+    /** Sem escala (ex.: desempregado, férias longas): todo dia segue a rotina de folga. */
+    val semEscala: Boolean = false,
 ) {
     /** Tipo pelo cálculo automático (sem trocas). */
     fun tipoAutomatico(data: LocalDate): TipoDia {
+        if (semEscala) return TipoDia.FOLGA
         val dias = ChronoUnit.DAYS.between(referenciaPlantao, data)
         return if (Math.floorMod(dias, 2L) == 0L) TipoDia.PLANTAO else TipoDia.FOLGA
     }
