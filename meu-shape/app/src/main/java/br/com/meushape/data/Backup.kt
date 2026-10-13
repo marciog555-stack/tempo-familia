@@ -91,11 +91,39 @@ object Backup {
                     total++
                 }
             }
+            // Backups antigos não têm a marca da configuração inicial: o app já estava configurado.
+            db.execSQL("INSERT OR REPLACE INTO config (chave, valor) VALUES ('configuracao_inicial', 'feita')")
+            limparDuplicados(db)
             db.setTransactionSuccessful()
         } finally {
             db.endTransaction()
         }
         Banco.get(ctx).invalidationTracker.refreshVersionsAsync()
         return total
+    }
+
+    /**
+     * Remove exercícios e itens de compra repetidos (sobram os de menor id) e corrige as
+     * referências de treinos, séries e marcações para o item que ficou.
+     */
+    fun limparDuplicados(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+        val exercicioQueFica = "(SELECT MIN(e2.id) FROM exercicio e2 JOIN exercicio e1 " +
+            "ON e1.nome = e2.nome AND e1.grupo = e2.grupo WHERE e1.id = %s)"
+        db.execSQL("UPDATE treino_exercicio SET exercicioId = ${exercicioQueFica.format("treino_exercicio.exercicioId")} " +
+            "WHERE exercicioId IN (SELECT id FROM exercicio)")
+        db.execSQL("UPDATE serie_feita SET exercicioId = ${exercicioQueFica.format("serie_feita.exercicioId")} " +
+            "WHERE exercicioId IN (SELECT id FROM exercicio)")
+        db.execSQL("DELETE FROM exercicio WHERE id NOT IN (SELECT MIN(id) FROM exercicio GROUP BY nome, grupo)")
+
+        db.execSQL(
+            "UPDATE OR IGNORE compra_marcada SET itemId = (SELECT MIN(c2.id) FROM item_compra c2 JOIN item_compra c1 " +
+                "ON c1.lista = c2.lista AND c1.nome = c2.nome AND c1.quantidade = c2.quantidade " +
+                "WHERE c1.id = compra_marcada.itemId) WHERE itemId IN (SELECT id FROM item_compra)"
+        )
+        db.execSQL(
+            "DELETE FROM item_compra WHERE id NOT IN " +
+                "(SELECT MIN(id) FROM item_compra GROUP BY lista, nome, quantidade)"
+        )
+        db.execSQL("DELETE FROM compra_marcada WHERE itemId NOT IN (SELECT id FROM item_compra)")
     }
 }

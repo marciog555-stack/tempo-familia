@@ -12,6 +12,7 @@ import br.com.meushape.notify.Avisos
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -23,7 +24,12 @@ class Repo(private val ctx: Context) {
     val db = Banco.get(ctx)
 
     /** Cria o cardápio padrão e o perfil inicial na primeira vez. */
-    suspend fun prepararPrimeiraVez() {
+    /** Evita que duas aberturas simultâneas (app + boot) criem os dados iniciais em dobro. */
+    private val trava = kotlinx.coroutines.sync.Mutex()
+
+    suspend fun prepararPrimeiraVez() = trava.withLock { prepararSemTrava() }
+
+    private suspend fun prepararSemTrava() {
         // Instalação que já tinha dados (antes da configuração inicial existir) não passa por ela.
         if (db.config().ler("configuracao_inicial") == null) {
             val jaUsava = db.plano().contar() > 0
@@ -46,6 +52,18 @@ class Repo(private val ctx: Context) {
         }
         listOf(Marmita.ALMOCO, Marmita.JANTA).forEach {
             if (db.marmitas().estoque(it) == null) db.marmitas().salvarEstoque(EstoqueMarmita(it))
+        }
+        // Limpa duplicatas criadas por versões antigas (uma vez só).
+        if (db.config().ler("limpeza_duplicados_v1") == null) {
+            val sql = db.openHelper.writableDatabase
+            sql.beginTransaction()
+            try {
+                Backup.limparDuplicados(sql)
+                sql.setTransactionSuccessful()
+            } finally {
+                sql.endTransaction()
+            }
+            db.config().salvar(Config("limpeza_duplicados_v1", "1"))
         }
     }
 
